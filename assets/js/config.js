@@ -1,6 +1,6 @@
 /**
- * Central content and destination configuration for the visualization hub.
- * Update project URLs here if a repository is published under a different path.
+ * Project content, destinations, and image sets for the cylindrical gallery.
+ * Replace the image paths inside a project to give that visualizer its own screenshots.
  */
 export const hubConfig = Object.freeze({
   accent: "#0075ff",
@@ -12,7 +12,13 @@ export const hubConfig = Object.freeze({
       description: "Audio-reactive binary terrain visualization.",
       category: "FFT / TERRAIN",
       href: "https://raideniv.github.io/binary-tower/",
-      visual: "binary"
+      images: Object.freeze([
+        "assets/images/showcase/2.png",
+        "assets/images/showcase/2.png",
+        "assets/images/showcase/2.png",
+        "assets/images/showcase/2.png",
+        "assets/images/showcase/2.png"
+      ])
     }),
     Object.freeze({
       id: "galaxy",
@@ -21,7 +27,13 @@ export const hubConfig = Object.freeze({
       description: "A deep-space particle field shaped by sound and motion.",
       category: "AUDIO / PARTICLES",
       href: "https://raideniv.github.io/galaxy/",
-      visual: "galaxy"
+      images: Object.freeze([
+        "assets/images/showcase/5.png",
+        "assets/images/showcase/5.png",
+        "assets/images/showcase/5.png",
+        "assets/images/showcase/5.png",
+        "assets/images/showcase/5.png"
+      ])
     }),
     Object.freeze({
       id: "particle-accelerator",
@@ -30,7 +42,13 @@ export const hubConfig = Object.freeze({
       description: "Reactive energy streams driven through a kinetic particle system.",
       category: "ENERGY / MOTION",
       href: "https://raideniv.github.io/particle-accelerator/",
-      visual: "accelerator"
+      images: Object.freeze([
+        "assets/images/showcase/1.png",
+        "assets/images/showcase/1.png",
+        "assets/images/showcase/1.png",
+        "assets/images/showcase/1.png",
+        "assets/images/showcase/1.png"
+      ])
     }),
     Object.freeze({
       id: "spectrogramic-voxel-engine",
@@ -39,7 +57,13 @@ export const hubConfig = Object.freeze({
       description: "Volumetric frequency architecture built from animated voxels.",
       category: "SPECTRUM / VOXELS",
       href: "https://raideniv.github.io/spectrogramic-voxel-engine/",
-      visual: "voxel"
+      images: Object.freeze([
+        "assets/images/showcase/3.png",
+        "assets/images/showcase/4.png",
+        "assets/images/showcase/3.png",
+        "assets/images/showcase/4.png",
+        "assets/images/showcase/3.png"
+      ])
     })
   ])
 });

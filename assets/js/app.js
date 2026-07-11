@@ -1,3 +1,7 @@
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { hubConfig } from "./config.js";
 
 const appShell = document.querySelector("#appShell");
@@ -12,28 +16,16 @@ const activeProjectName = document.querySelector("#activeProjectName");
 const activeProjectDescription = document.querySelector("#activeProjectDescription");
 const workspaceDate = document.querySelector("#workspaceDate");
 const sidebarDate = document.querySelector("#sidebarDate");
-const canvas = document.querySelector("#ambientCanvas");
-const context = canvas.getContext("2d", { alpha: true });
+const canvas = document.querySelector("#showcaseCanvas");
+const showcase = document.querySelector(".showcase");
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const projectTotal = hubConfig.projects.length;
 const twoDigit = (value) => String(value).padStart(2, "0");
+
 let selectedIndex = 0;
 let sidebarCollapsed = false;
-let animationFrame = 0;
-let lastFrameTime = 0;
-let elapsed = 0;
-
-const state = {
-  width: 0,
-  height: 0,
-  pixelRatio: 1,
-  pointerX: 0,
-  pointerY: 0,
-  targetPointerX: 0,
-  targetPointerY: 0,
-  particles: []
-};
+let sceneController = null;
 
 document.documentElement.style.setProperty("--accent", hubConfig.accent);
 totalProjects.textContent = twoDigit(projectTotal);
@@ -53,67 +45,27 @@ const currentDate = formatDate(new Date());
 workspaceDate.textContent = currentDate;
 sidebarDate.textContent = currentDate;
 
-function iconMarkup(type) {
-  const icons = {
-    binary: `
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M8 49V31M18 49V17M28 49V25M38 49V10M48 49V22M58 49V14" />
-        <path d="M6 50H60" />
-      </svg>`,
-    galaxy: `
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <ellipse cx="32" cy="32" rx="24" ry="10" transform="rotate(-18 32 32)" />
-        <ellipse cx="32" cy="32" rx="16" ry="6" transform="rotate(28 32 32)" />
-        <circle cx="32" cy="32" r="3" />
-        <circle cx="13" cy="19" r="1.5" />
-        <circle cx="51" cy="15" r="1" />
-        <circle cx="54" cy="45" r="1.5" />
-      </svg>`,
-    accelerator: `
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="32" r="21" />
-        <circle cx="32" cy="32" r="11" />
-        <path d="M32 4V18M32 46V60M4 32H18M46 32H60M12 12L22 22M42 42L52 52M52 12L42 22M22 42L12 52" />
-        <circle cx="32" cy="32" r="3" />
-      </svg>`,
-    voxel: `
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M32 7L54 19V45L32 57L10 45V19Z" />
-        <path d="M10 19L32 32L54 19M32 32V57M21 13L43 26V51M43 13L21 26V51" />
-      </svg>`
-  };
-
-  return icons[type] ?? icons.binary;
-}
-
-function createProjectCard(project, index) {
-  const card = document.createElement("a");
-  card.className = "project-card";
-  card.href = project.href;
-  card.target = "_blank";
-  card.rel = "noopener noreferrer";
-  card.dataset.index = String(index);
-  card.dataset.projectId = project.id;
-  card.setAttribute("aria-label", `Open ${project.name}`);
-
-  card.innerHTML = `
-    <span class="project-card__number">${twoDigit(index + 1)}</span>
-    <span class="project-card__glyph">${iconMarkup(project.visual)}</span>
-    <span class="project-card__copy">
+function createProjectLink(project, index) {
+  const link = document.createElement("a");
+  link.className = "project-link";
+  link.href = project.href;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.dataset.index = String(index);
+  link.setAttribute("aria-label", `Open ${project.name}`);
+  link.innerHTML = `
+    <span class="project-link__number">${twoDigit(index + 1)}</span>
+    <span class="project-link__copy">
       <strong>${project.name}</strong>
-      <small>${project.description}</small>
+      <small>${project.category}</small>
     </span>
-    <span class="project-card__meta">
-      <span>${project.category}</span>
-      <span class="project-card__open" aria-hidden="true">↗</span>
-    </span>
+    <span class="project-link__open" aria-hidden="true">↗</span>
   `;
 
-  card.addEventListener("pointerenter", () => selectProject(index, false));
-  card.addEventListener("focus", () => selectProject(index, false));
-  card.addEventListener("click", () => selectProject(index, false));
-
-  return card;
+  link.addEventListener("pointerenter", () => selectProject(index));
+  link.addEventListener("focus", () => selectProject(index));
+  link.addEventListener("click", () => selectProject(index));
+  return link;
 }
 
 function createSidebarLink(project, index) {
@@ -121,6 +73,7 @@ function createSidebarLink(project, index) {
   link.className = "sidebar-project-link";
   link.href = `#${project.id}`;
   link.dataset.index = String(index);
+  link.setAttribute("aria-label", `Highlight ${project.name}`);
   link.innerHTML = `
     <span class="sidebar-project-link__number">${twoDigit(index + 1)}</span>
     <span class="sidebar-project-link__name">${project.shortName}</span>
@@ -129,10 +82,11 @@ function createSidebarLink(project, index) {
 
   link.addEventListener("click", (event) => {
     event.preventDefault();
-    selectProject(index, true);
+    selectProject(index);
     projectMenu.querySelector(`[data-index="${index}"]`)?.focus({ preventScroll: true });
   });
 
+  link.addEventListener("pointerenter", () => selectProject(index));
   return link;
 }
 
@@ -141,23 +95,23 @@ function renderProjects() {
   const sidebarFragment = document.createDocumentFragment();
 
   hubConfig.projects.forEach((project, index) => {
-    menuFragment.append(createProjectCard(project, index));
+    menuFragment.append(createProjectLink(project, index));
     sidebarFragment.append(createSidebarLink(project, index));
   });
 
   projectMenu.replaceChildren(menuFragment);
   sidebarProjects.replaceChildren(sidebarFragment);
-  selectProject(0, false);
+  selectProject(0);
 }
 
-function selectProject(index, announce = false) {
+function selectProject(index) {
   selectedIndex = (index + projectTotal) % projectTotal;
   const project = hubConfig.projects[selectedIndex];
 
-  document.querySelectorAll(".project-card").forEach((card, cardIndex) => {
-    const isActive = cardIndex === selectedIndex;
-    card.classList.toggle("is-active", isActive);
-    card.setAttribute("aria-current", isActive ? "true" : "false");
+  document.querySelectorAll(".project-link").forEach((link, linkIndex) => {
+    const isActive = linkIndex === selectedIndex;
+    link.classList.toggle("is-active", isActive);
+    link.setAttribute("aria-current", isActive ? "true" : "false");
   });
 
   document.querySelectorAll(".sidebar-project-link").forEach((link, linkIndex) => {
@@ -169,11 +123,7 @@ function selectProject(index, announce = false) {
   activeIndex.textContent = twoDigit(selectedIndex + 1);
   activeProjectName.textContent = project.name.toUpperCase();
   activeProjectDescription.textContent = project.description;
-  document.body.dataset.activeProject = project.visual;
-
-  if (announce) {
-    activeProjectName.focus?.();
-  }
+  sceneController?.setProject(project);
 }
 
 function setSidebarCollapsed(collapsed) {
@@ -183,7 +133,7 @@ function setSidebarCollapsed(collapsed) {
   sidebarToggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
   sidebarToggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
   sidebarToggleIcon.textContent = collapsed ? "›" : "‹";
-  window.setTimeout(resizeCanvas, 200);
+  window.setTimeout(() => sceneController?.resize(), 200);
 }
 
 sidebarToggle.addEventListener("click", () => setSidebarCollapsed(!sidebarCollapsed));
@@ -195,13 +145,13 @@ window.addEventListener("keydown", (event) => {
 
   if (event.key === "ArrowDown" || event.key === "ArrowRight") {
     event.preventDefault();
-    selectProject(selectedIndex + 1, true);
+    selectProject(selectedIndex + 1);
     projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.focus({ preventScroll: true });
   }
 
   if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
     event.preventDefault();
-    selectProject(selectedIndex - 1, true);
+    selectProject(selectedIndex - 1);
     projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.focus({ preventScroll: true });
   }
 
@@ -210,191 +160,433 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-function createParticles() {
-  const count = Math.max(28, Math.min(76, Math.round(state.width / 24)));
-  state.particles = Array.from({ length: count }, (_, index) => ({
-    x: ((index * 47) % 101) / 100,
-    y: ((index * 71) % 97) / 96,
-    size: index % 7 === 0 ? 1.7 : index % 3 === 0 ? 1.1 : 0.7,
-    speed: 0.0008 + (index % 6) * 0.00025,
-    phase: index * 0.83
-  }));
-}
+class CylindricalShowcase {
+  constructor(targetCanvas, container) {
+    this.canvas = targetCanvas;
+    this.container = container;
+    this.clock = new THREE.Clock();
+    this.cards = [];
+    this.textures = new Map();
+    this.activeProject = null;
+    this.rotation = 0;
+    this.rotationSpeed = 0.002;
+    this.lastDirection = 1;
+    this.scrollOffset = 0;
+    this.scrollVelocity = 0;
+    this.targetCameraTilt = 0;
+    this.dragging = false;
+    this.pointerId = null;
+    this.lastPointerX = 0;
+    this.lastPointerY = 0;
+    this.pendingProjectToken = 0;
+    this.frameId = 0;
 
-function resizeCanvas() {
-  const bounds = canvas.getBoundingClientRect();
-  state.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  state.width = Math.max(1, bounds.width);
-  state.height = Math.max(1, bounds.height);
-  canvas.width = Math.round(state.width * state.pixelRatio);
-  canvas.height = Math.round(state.height * state.pixelRatio);
-  context.setTransform(state.pixelRatio, 0, 0, state.pixelRatio, 0, 0);
-  createParticles();
-  drawAmbient(0, true);
-}
+    this.instanceCount = 20;
+    this.imagesPerTurn = 6;
+    this.radius = 6.4;
+    this.spiralStep = 1.48;
+    this.totalHeight = this.instanceCount * this.spiralStep;
 
-function drawGrid(ctx, width, height, time) {
-  const horizon = height * 0.52 + state.pointerY * 8;
-  const centerX = width * 0.5 + state.pointerX * 18;
-  const lowerBound = height + 40;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x000000);
 
-  ctx.save();
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = "rgba(0, 117, 255, 0.12)";
+    this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 120);
+    this.camera.position.set(0, 0, 12);
 
-  for (let index = -11; index <= 11; index += 1) {
-    const topX = centerX + index * 18;
-    const bottomX = centerX + index * 92;
-    ctx.beginPath();
-    ctx.moveTo(topX, horizon);
-    ctx.lineTo(bottomX, lowerBound);
-    ctx.stroke();
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.42, 0.08);
+    this.composer.addPass(this.bloomPass);
+
+    this.textureLoader = new THREE.TextureLoader();
+    this.textureLoader.setCrossOrigin("anonymous");
+
+    this.createBackgroundGrid();
+    this.createWireframeShape();
+    this.createCards();
+    this.bindInput();
+    this.resize();
+    this.animate = this.animate.bind(this);
+    this.frameId = requestAnimationFrame(this.animate);
   }
 
-  for (let row = 0; row < 13; row += 1) {
-    const progress = row / 12;
-    const eased = progress * progress;
-    const y = horizon + eased * (height - horizon + 20);
-    const pulse = reducedMotion.matches ? 0 : Math.sin(time * 0.0008 + row * 0.4) * 0.35;
-    ctx.globalAlpha = 0.42 + pulse * 0.1;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-    ctx.stroke();
+  createBackgroundGrid() {
+    const positions = [];
+    const gridRadius = 28;
+    const minY = -42;
+    const maxY = 42;
+    const radialSegments = 72;
+    const ringSegments = 144;
+
+    for (let i = 0; i < radialSegments; i += 1) {
+      const angle = (i / radialSegments) * Math.PI * 2;
+      const x = Math.sin(angle) * gridRadius;
+      const z = Math.cos(angle) * gridRadius;
+      positions.push(x, minY, z, x, maxY, z);
+    }
+
+    for (let y = minY; y <= maxY; y += 1.15) {
+      for (let i = 0; i < ringSegments; i += 1) {
+        const angleA = (i / ringSegments) * Math.PI * 2;
+        const angleB = ((i + 1) / ringSegments) * Math.PI * 2;
+        positions.push(
+          Math.sin(angleA) * gridRadius,
+          y,
+          Math.cos(angleA) * gridRadius,
+          Math.sin(angleB) * gridRadius,
+          y,
+          Math.cos(angleB) * gridRadius
+        );
+      }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({
+      color: new THREE.Color(hubConfig.accent),
+      transparent: true,
+      opacity: 0.13,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+
+    this.grid = new THREE.LineSegments(geometry, material);
+    this.grid.renderOrder = -10;
+    this.scene.add(this.grid);
+
+    const pointGeometry = new THREE.BufferGeometry();
+    const pointPositions = [];
+    for (let y = -36; y <= 36; y += 2.3) {
+      for (let i = 0; i < 48; i += 1) {
+        const angle = (i / 48) * Math.PI * 2;
+        pointPositions.push(Math.sin(angle) * 27.9, y, Math.cos(angle) * 27.9);
+      }
+    }
+    pointGeometry.setAttribute("position", new THREE.Float32BufferAttribute(pointPositions, 3));
+    const pointMaterial = new THREE.PointsMaterial({
+      color: new THREE.Color("#4ca0ff"),
+      size: 0.028,
+      transparent: true,
+      opacity: 0.58,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    this.gridPoints = new THREE.Points(pointGeometry, pointMaterial);
+    this.scene.add(this.gridPoints);
   }
 
-  ctx.restore();
-}
+  createWireframeShape() {
+    const geometry = new THREE.TorusGeometry(1, 0.35, 16, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color("#4ca0ff"),
+      wireframe: true,
+      transparent: true,
+      opacity: 0.82,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
 
-function drawOrbit(ctx, width, height, time) {
-  const centerX = width * 0.62 + state.pointerX * 26;
-  const centerY = height * 0.49 + state.pointerY * 18;
-  const baseRadius = Math.min(width, height) * 0.27;
-
-  ctx.save();
-  ctx.translate(centerX, centerY);
-  ctx.rotate(-0.18 + state.pointerX * 0.025);
-
-  for (let ring = 0; ring < 5; ring += 1) {
-    ctx.beginPath();
-    ctx.ellipse(
-      0,
-      0,
-      baseRadius * (0.72 + ring * 0.12),
-      baseRadius * (0.24 + ring * 0.035),
-      ring * 0.22,
-      0,
-      Math.PI * 2
-    );
-    ctx.strokeStyle = `rgba(0, 117, 255, ${0.24 - ring * 0.035})`;
-    ctx.lineWidth = ring === 0 ? 1.5 : 1;
-    ctx.stroke();
+    this.torus = new THREE.Mesh(geometry, material);
+    this.torus.scale.setScalar(2.3);
+    this.torus.rotation.set(-0.5, 0, -1.95);
+    this.scene.add(this.torus);
   }
 
-  const nodeCount = 18;
-  for (let index = 0; index < nodeCount; index += 1) {
-    const angle = (index / nodeCount) * Math.PI * 2 + (reducedMotion.matches ? 0 : time * 0.00008);
-    const radius = baseRadius * (0.72 + (index % 4) * 0.08);
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius * 0.32;
-    ctx.fillStyle = index % 5 === 0 ? "rgba(141, 196, 255, 0.95)" : "rgba(0, 117, 255, 0.62)";
-    ctx.beginPath();
-    ctx.arc(x, y, index % 5 === 0 ? 2.1 : 1.15, 0, Math.PI * 2);
-    ctx.fill();
+  createCardMaterial() {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: null },
+        uTime: { value: 0 },
+        uAccent: { value: new THREE.Color(hubConfig.accent) },
+        uAccentBright: { value: new THREE.Color("#4ca0ff") },
+        uOpacity: { value: 1 },
+        uDepthFade: { value: 1 },
+        uFlicker: { value: 0.15 },
+        uChromatic: { value: 0.006 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying float vCurve;
+
+        void main() {
+          vUv = uv;
+          vec3 transformed = position;
+          float curve = position.x * position.x * 0.055;
+          transformed.z -= curve;
+          vCurve = curve;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+
+        uniform sampler2D uTexture;
+        uniform float uTime;
+        uniform vec3 uAccent;
+        uniform vec3 uAccentBright;
+        uniform float uOpacity;
+        uniform float uDepthFade;
+        uniform float uFlicker;
+        uniform float uChromatic;
+
+        varying vec2 vUv;
+        varying float vCurve;
+
+        float roundedBox(vec2 p, vec2 b, float r) {
+          vec2 q = abs(p) - b + r;
+          return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+        }
+
+        void main() {
+          vec2 uv = vUv;
+          vec2 offset = vec2(uChromatic * (1.0 - uDepthFade), 0.0);
+          float r = texture2D(uTexture, uv + offset).r;
+          float g = texture2D(uTexture, uv).g;
+          float b = texture2D(uTexture, uv - offset).b;
+          vec3 source = vec3(r, g, b);
+          float luma = dot(source, vec3(0.299, 0.587, 0.114));
+          luma = clamp((luma - 0.43) * 1.35 + 0.5, 0.0, 1.0);
+
+          vec2 cellCount = vec2(118.0, 68.0);
+          vec2 cell = fract(uv * cellCount) - 0.5;
+          float radius = mix(0.08, 0.49, luma);
+          float dotMask = 1.0 - smoothstep(radius - 0.075, radius, length(cell));
+
+          float scan = 0.82 + 0.18 * sin((uv.y * 760.0) + uTime * 15.0);
+          vec3 imageBlue = mix(uAccent * 0.12, uAccentBright * (0.72 + luma * 1.1), dotMask);
+          imageBlue *= scan;
+          imageBlue += source * 0.075;
+
+          vec2 centered = uv - 0.5;
+          float panel = roundedBox(centered, vec2(0.495), 0.012);
+          float panelMask = 1.0 - smoothstep(-0.006, 0.006, panel);
+
+          float edgeDistance = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+          float border = 1.0 - smoothstep(0.006, 0.016, edgeDistance);
+
+          float corner = 0.0;
+          float cornerSize = 0.085;
+          float cornerWidth = 0.008;
+          vec2 c = min(uv, 1.0 - uv);
+          if ((c.x < cornerWidth && c.y < cornerSize) || (c.y < cornerWidth && c.x < cornerSize)) {
+            corner = 1.0;
+          }
+
+          float flickerWave = sin(uTime * 67.0 + uv.y * 9.0) * 0.5 + 0.5;
+          float flicker = 1.0 - uFlicker * 0.14 * flickerWave;
+
+          vec3 color = imageBlue;
+          color = mix(color, uAccentBright * 2.1, max(border, corner));
+          color *= flicker;
+
+          float alpha = panelMask * uOpacity * uDepthFade;
+          gl_FragColor = vec4(color, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    });
   }
 
-  ctx.restore();
-}
+  createCards() {
+    const geometry = new THREE.PlaneGeometry(4.15, 2.5, 32, 1);
 
-function drawWaveform(ctx, width, height, time) {
-  const centerY = height * 0.5;
-  const startX = Math.max(24, width * 0.08);
-  const endX = width * 0.95;
-  const points = 84;
-
-  ctx.save();
-  ctx.beginPath();
-  for (let index = 0; index <= points; index += 1) {
-    const x = startX + (index / points) * (endX - startX);
-    const envelope = Math.sin((index / points) * Math.PI);
-    const movement = reducedMotion.matches ? 0 : time * 0.0035;
-    const amplitude = Math.sin(index * 0.72 + movement) * 8 + Math.sin(index * 0.19 - movement * 0.42) * 5;
-    const y = centerY + amplitude * envelope;
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    for (let i = 0; i < this.instanceCount; i += 1) {
+      const material = this.createCardMaterial();
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.frustumCulled = false;
+      mesh.userData.index = i;
+      mesh.userData.baseAngle = i * ((Math.PI * 2) / this.imagesPerTurn);
+      mesh.userData.baseY = -(this.totalHeight / 2) + i * this.spiralStep;
+      this.cards.push(mesh);
+      this.scene.add(mesh);
+    }
   }
-  ctx.strokeStyle = "rgba(84, 163, 255, 0.2)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.restore();
-}
 
-function drawParticles(ctx, width, height, time) {
-  ctx.save();
-  state.particles.forEach((particle) => {
-    const drift = reducedMotion.matches ? 0 : time * particle.speed;
-    const x = ((particle.x + drift * 0.011) % 1) * width;
-    const y = (particle.y * height + Math.sin(drift + particle.phase) * 9 + height) % height;
-    const distanceFromCenter = Math.abs(x / width - 0.5);
-    const opacity = Math.max(0.08, 0.5 - distanceFromCenter * 0.55);
-    ctx.fillStyle = `rgba(84, 163, 255, ${opacity})`;
-    ctx.beginPath();
-    ctx.arc(x, y, particle.size, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
-}
+  loadTexture(path) {
+    if (this.textures.has(path)) return this.textures.get(path);
 
-function drawAmbient(timestamp, force = false) {
-  if (!force && document.hidden) return;
+    const promise = new Promise((resolve, reject) => {
+      this.textureLoader.load(
+        path,
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.minFilter = THREE.LinearFilter;
+          texture.magFilter = THREE.LinearFilter;
+          texture.wrapS = THREE.ClampToEdgeWrapping;
+          texture.wrapT = THREE.ClampToEdgeWrapping;
+          texture.needsUpdate = true;
+          resolve(texture);
+        },
+        undefined,
+        reject
+      );
+    });
 
-  const delta = Math.min(32, timestamp - lastFrameTime || 16.67);
-  lastFrameTime = timestamp;
-  elapsed += delta;
+    this.textures.set(path, promise);
+    return promise;
+  }
 
-  state.pointerX += (state.targetPointerX - state.pointerX) * 0.055;
-  state.pointerY += (state.targetPointerY - state.pointerY) * 0.055;
+  async setProject(project) {
+    this.activeProject = project;
+    const token = ++this.pendingProjectToken;
 
-  context.clearRect(0, 0, state.width, state.height);
-  drawGrid(context, state.width, state.height, elapsed);
-  drawWaveform(context, state.width, state.height, elapsed);
-  drawOrbit(context, state.width, state.height, elapsed);
-  drawParticles(context, state.width, state.height, elapsed);
+    try {
+      const loaded = await Promise.all(project.images.map((path) => this.loadTexture(path)));
+      if (token !== this.pendingProjectToken) return;
 
-  if (!reducedMotion.matches) {
-    animationFrame = requestAnimationFrame(drawAmbient);
+      this.cards.forEach((card, index) => {
+        card.material.uniforms.uTexture.value = loaded[index % loaded.length];
+        card.material.needsUpdate = true;
+      });
+    } catch (error) {
+      console.error("Unable to load showcase images.", error);
+    }
+  }
+
+  bindInput() {
+    this.onWheel = (event) => {
+      event.preventDefault();
+      const impulse = THREE.MathUtils.clamp(event.deltaY * 0.00075, -0.32, 0.32);
+      this.scrollVelocity += impulse;
+    };
+
+    this.onPointerDown = (event) => {
+      this.dragging = true;
+      this.pointerId = event.pointerId;
+      this.lastPointerX = event.clientX;
+      this.lastPointerY = event.clientY;
+      this.canvas.classList.add("is-dragging");
+      this.canvas.setPointerCapture?.(event.pointerId);
+    };
+
+    this.onPointerMove = (event) => {
+      if (!this.dragging || event.pointerId !== this.pointerId) return;
+      const deltaX = event.clientX - this.lastPointerX;
+      const deltaY = event.clientY - this.lastPointerY;
+      this.lastPointerX = event.clientX;
+      this.lastPointerY = event.clientY;
+      this.scrollVelocity += deltaX * 0.0008 + deltaY * 0.00135;
+    };
+
+    this.onPointerUp = (event) => {
+      if (event.pointerId !== this.pointerId) return;
+      this.dragging = false;
+      this.pointerId = null;
+      this.canvas.classList.remove("is-dragging");
+      try {
+        this.canvas.releasePointerCapture?.(event.pointerId);
+      } catch {
+        // The pointer may already have been released by the browser.
+      }
+    };
+
+    this.canvas.addEventListener("wheel", this.onWheel, { passive: false });
+    this.canvas.addEventListener("pointerdown", this.onPointerDown);
+    this.canvas.addEventListener("pointermove", this.onPointerMove);
+    this.canvas.addEventListener("pointerup", this.onPointerUp);
+    this.canvas.addEventListener("pointercancel", this.onPointerUp);
+  }
+
+  resize() {
+    const bounds = this.container.getBoundingClientRect();
+    const width = Math.max(1, Math.round(bounds.width));
+    const height = Math.max(1, Math.round(bounds.height));
+
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height, false);
+    this.composer.setSize(width, height);
+    this.bloomPass.setSize(width, height);
+  }
+
+  animate() {
+    const delta = Math.min(this.clock.getDelta(), 0.05);
+    const elapsed = this.clock.elapsedTime;
+    const motionScale = reducedMotion.matches ? 0.16 : 1;
+
+    this.scrollVelocity *= this.dragging ? 0.93 : 0.87;
+    if (Math.abs(this.scrollVelocity) > 0.00001) {
+      this.lastDirection = Math.sign(this.scrollVelocity);
+    }
+
+    const autoSpeed = 0.002 * this.lastDirection * motionScale;
+    const targetRotationSpeed = autoSpeed + this.scrollVelocity * 1.75;
+    this.rotationSpeed += (THREE.MathUtils.clamp(targetRotationSpeed, -0.15, 0.15) - this.rotationSpeed) * 0.09;
+    this.rotation += this.rotationSpeed * delta * 60;
+    this.scrollOffset += this.scrollVelocity * 10.2 * motionScale;
+
+    const squeeze = Math.min(Math.abs(this.scrollVelocity) * 3, 0.45);
+
+    this.cards.forEach((card, index) => {
+      const angle = card.userData.baseAngle + this.rotation;
+      const rawY = card.userData.baseY + this.scrollOffset;
+      const y = THREE.MathUtils.euclideanModulo(rawY + this.totalHeight / 2, this.totalHeight) - this.totalHeight / 2;
+      const x = Math.sin(angle) * this.radius;
+      const z = Math.cos(angle) * this.radius;
+
+      card.position.set(x, y, z);
+      card.rotation.set(0, angle, 0);
+      card.scale.set(0.83 * (1 - squeeze * 0.28), 0.83 * (1 + squeeze * 0.13), 0.83);
+
+      const frontness = THREE.MathUtils.smoothstep(z, -this.radius * 0.65, this.radius);
+      const verticalFade = 1 - THREE.MathUtils.smoothstep(Math.abs(y), 4.0, 9.5);
+      const depthFade = THREE.MathUtils.clamp(frontness * verticalFade, 0.04, 1);
+      card.material.uniforms.uTime.value = elapsed;
+      card.material.uniforms.uDepthFade.value = depthFade;
+      card.material.uniforms.uOpacity.value = 0.32 + depthFade * 0.68;
+      card.renderOrder = Math.round((z + this.radius) * 100) + index;
+    });
+
+    const torusTargetSpeed = 0.004 * this.lastDirection + this.scrollVelocity * 1.75;
+    this.torus.rotation.y += THREE.MathUtils.clamp(torusTargetSpeed, -0.16, 0.16) * delta * 60;
+    this.torus.rotation.x = -0.5 + Math.sin(elapsed * 0.25) * 0.035;
+    this.torus.rotation.z = -1.95;
+    const torusScale = 2.3 - Math.min(Math.abs(this.scrollVelocity) * 2.2, 0.42);
+    this.torus.scale.lerp(new THREE.Vector3(torusScale, torusScale, torusScale), 0.06);
+
+    this.targetCameraTilt = THREE.MathUtils.clamp(this.scrollVelocity * 0.9, -0.08, 0.08);
+    this.camera.rotation.z += (this.targetCameraTilt - this.camera.rotation.z) * 0.055;
+    this.grid.rotation.y = this.rotation * 0.035;
+    this.gridPoints.rotation.y = this.rotation * 0.035;
+
+    this.composer.render();
+    this.frameId = requestAnimationFrame(this.animate);
   }
 }
 
-function restartAnimation() {
-  cancelAnimationFrame(animationFrame);
-  lastFrameTime = 0;
-  if (reducedMotion.matches) {
-    drawAmbient(0, true);
-  } else {
-    animationFrame = requestAnimationFrame(drawAmbient);
-  }
+function showWebGLError(message) {
+  const error = document.createElement("div");
+  error.className = "webgl-error";
+  error.textContent = message;
+  showcase.append(error);
 }
-
-window.addEventListener("pointermove", (event) => {
-  state.targetPointerX = (event.clientX / window.innerWidth - 0.5) * 2;
-  state.targetPointerY = (event.clientY / window.innerHeight - 0.5) * 2;
-});
-
-window.addEventListener("pointerleave", () => {
-  state.targetPointerX = 0;
-  state.targetPointerY = 0;
-});
-
-window.addEventListener("resize", resizeCanvas, { passive: true });
-reducedMotion.addEventListener?.("change", restartAnimation);
-document.addEventListener("visibilitychange", restartAnimation);
 
 renderProjects();
 
-if (window.innerWidth <= 860) {
+if (window.innerWidth <= 980) {
   setSidebarCollapsed(true);
 }
 
-resizeCanvas();
-restartAnimation();
+try {
+  sceneController = new CylindricalShowcase(canvas, showcase);
+  sceneController.setProject(hubConfig.projects[selectedIndex]);
+} catch (error) {
+  console.error(error);
+  showWebGLError("The 3D showcase could not start. Enable WebGL hardware acceleration and reload the page.");
+}
+
+window.addEventListener("resize", () => sceneController?.resize(), { passive: true });

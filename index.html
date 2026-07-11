@@ -4,13 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0075ff" />
-  <meta
-    name="description"
-    content="A central launch hub for interactive audio visualization projects."
-  />
+  <meta name="description" content="A 3D cylindrical gallery hub for interactive audio visualization projects." />
   <title>AUDIO VISUALIZATION HUB</title>
   <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg" />
   <link rel="stylesheet" href="assets/css/main.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#projectMenu">Skip to project menu</a>
@@ -26,20 +31,20 @@
         aria-label="Collapse sidebar"
         title="Collapse sidebar"
       >
-        <span class="sidebar-toggle__icon" id="sidebarToggleIcon" aria-hidden="true">‹</span>
+        <span id="sidebarToggleIcon" aria-hidden="true">‹</span>
       </button>
 
       <header class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 48 48" role="img">
-            <path d="M5 24h6l4-12 7 24 6-28 6 22 4-6h5" />
+          <svg viewBox="0 0 48 48">
             <circle cx="24" cy="24" r="20" />
+            <path d="M6 25h6l4-12 7 24 6-28 6 22 4-6h4" />
           </svg>
         </div>
         <div class="brand-copy">
           <p class="eyebrow">INTERACTIVE ARCHIVE</p>
           <h1>A/V HUB</h1>
-          <p class="brand-description">Audio-reactive experiments, rendered in real time.</p>
+          <p>Audio-reactive visualization experiments.</p>
         </div>
       </header>
 
@@ -57,18 +62,9 @@
           <span class="status-dot" aria-label="System online"></span>
         </div>
         <dl class="system-readout">
-          <div>
-            <dt>STATUS</dt>
-            <dd>ONLINE</dd>
-          </div>
-          <div>
-            <dt>MODE</dt>
-            <dd>REALTIME</dd>
-          </div>
-          <div>
-            <dt>PROJECTS</dt>
-            <dd>04</dd>
-          </div>
+          <div><dt>STATUS</dt><dd>ONLINE</dd></div>
+          <div><dt>RENDER</dt><dd>WEBGL</dd></div>
+          <div><dt>MODE</dt><dd>REALTIME</dd></div>
         </dl>
       </section>
 
@@ -78,63 +74,46 @@
       </footer>
     </aside>
 
-    <main class="workspace">
-      <canvas class="ambient-canvas" id="ambientCanvas" aria-hidden="true"></canvas>
-      <div class="noise-layer" aria-hidden="true"></div>
+    <main class="showcase" aria-labelledby="menuTitle">
+      <canvas id="showcaseCanvas" aria-hidden="true"></canvas>
+      <div class="scanlines" aria-hidden="true"></div>
+      <div class="vignette" aria-hidden="true"></div>
 
-      <header class="workspace-header">
+      <header class="showcase-header">
         <div>
-          <p class="eyebrow">OPEN SOURCE WORKSPACE</p>
-          <div class="workspace-title-rule" aria-hidden="true"></div>
-          <h2>AUDIO VISUALIZATION HUB</h2>
-          <p class="workspace-subtitle">SELECT A PROJECT / LAUNCH EXPERIENCE</p>
+          <p class="eyebrow">AUDIO VISUALIZATION ARCHIVE</p>
+          <h2>SELECT VISUALIZER</h2>
         </div>
-        <div class="workspace-meta" aria-label="Workspace metadata">
-          <span>V 1.0</span>
+        <div class="showcase-meta">
+          <span>WEBGL / REALTIME</span>
           <span id="workspaceDate">—</span>
-          <span>WEB AUDIO / VISUAL SYSTEMS</span>
         </div>
       </header>
 
-      <section class="hub-stage" aria-labelledby="menuTitle">
-        <div class="stage-frame">
-          <span class="frame-corner frame-corner--tl" aria-hidden="true"></span>
-          <span class="frame-corner frame-corner--tr" aria-hidden="true"></span>
-          <span class="frame-corner frame-corner--bl" aria-hidden="true"></span>
-          <span class="frame-corner frame-corner--br" aria-hidden="true"></span>
-
-          <div class="stage-heading">
-            <div>
-              <p class="stage-kicker">PROJECT DIRECTORY</p>
-              <h3 id="menuTitle">SELECT VISUALIZER</h3>
-            </div>
-            <div class="stage-index" aria-live="polite">
-              <span id="activeIndex">01</span>
-              <span aria-hidden="true">/</span>
-              <span id="totalProjects">04</span>
-            </div>
+      <section class="center-menu" aria-label="Visualizer selection">
+        <div class="menu-heading">
+          <span id="activeIndex">01</span>
+          <div>
+            <p>PROJECT DIRECTORY</p>
+            <h3 id="menuTitle">VISUALIZERS</h3>
           </div>
+          <span class="menu-total">/ <span id="totalProjects">04</span></span>
+        </div>
 
-          <nav class="project-menu" id="projectMenu" aria-label="Audio visualization projects"></nav>
+        <nav class="project-menu" id="projectMenu" aria-label="Audio visualization projects"></nav>
 
-          <div class="project-detail" id="projectDetail" aria-live="polite">
-            <div class="project-detail__signal" aria-hidden="true">
-              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-            </div>
-            <div>
-              <span class="project-detail__label">ACTIVE PROJECT</span>
-              <strong id="activeProjectName">BINARY TOWER</strong>
-            </div>
-            <p id="activeProjectDescription">Audio-reactive binary terrain visualization.</p>
-          </div>
+        <div class="active-project" aria-live="polite">
+          <span>ACTIVE PROJECT</span>
+          <strong id="activeProjectName">BINARY TOWER</strong>
+          <p id="activeProjectDescription">Audio-reactive binary terrain visualization.</p>
         </div>
       </section>
 
-      <footer class="workspace-footer">
+      <div class="showcase-instructions" aria-hidden="true">
+        <span>SCROLL / DRAG TO ROTATE</span>
         <span>↑ ↓ SELECT</span>
         <span>ENTER OPEN</span>
-        <span>POINTER HOVER</span>
-      </footer>
+      </div>
     </main>
   </div>
 
