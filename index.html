@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0075ff" />
+  <meta
+    name="description"
+    content="A central launch hub for interactive audio visualization projects."
+  />
+  <title>AUDIO VISUALIZATION HUB</title>
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg" />
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+  <a class="skip-link" href="#projectMenu">Skip to project menu</a>
+
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar" aria-label="Audio visualization hub sidebar">
+      <button
+        class="sidebar-toggle"
+        id="sidebarToggle"
+        type="button"
+        aria-controls="sidebar"
+        aria-expanded="true"
+        aria-label="Collapse sidebar"
+        title="Collapse sidebar"
+      >
+        <span class="sidebar-toggle__icon" id="sidebarToggleIcon" aria-hidden="true">‹</span>
+      </button>
+
+      <header class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M5 24h6l4-12 7 24 6-28 6 22 4-6h5" />
+            <circle cx="24" cy="24" r="20" />
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <p class="eyebrow">INTERACTIVE ARCHIVE</p>
+          <h1>A/V HUB</h1>
+          <p class="brand-description">Audio-reactive experiments, rendered in real time.</p>
+        </div>
+      </header>
+
+      <section class="sidebar-section" aria-labelledby="projectIndexTitle">
+        <div class="section-heading">
+          <span id="projectIndexTitle">PROJECT INDEX</span>
+          <span id="projectCount">04</span>
+        </div>
+        <nav class="sidebar-projects" id="sidebarProjects" aria-label="Project index"></nav>
+      </section>
+
+      <section class="sidebar-section sidebar-section--system" aria-labelledby="systemTitle">
+        <div class="section-heading">
+          <span id="systemTitle">SYSTEM</span>
+          <span class="status-dot" aria-label="System online"></span>
+        </div>
+        <dl class="system-readout">
+          <div>
+            <dt>STATUS</dt>
+            <dd>ONLINE</dd>
+          </div>
+          <div>
+            <dt>MODE</dt>
+            <dd>REALTIME</dd>
+          </div>
+          <div>
+            <dt>PROJECTS</dt>
+            <dd>04</dd>
+          </div>
+        </dl>
+      </section>
+
+      <footer class="sidebar-footer">
+        <span>AUDIO VISUALIZATION HUB</span>
+        <span id="sidebarDate">—</span>
+      </footer>
+    </aside>
+
+    <main class="workspace">
+      <canvas class="ambient-canvas" id="ambientCanvas" aria-hidden="true"></canvas>
+      <div class="noise-layer" aria-hidden="true"></div>
+
+      <header class="workspace-header">
+        <div>
+          <p class="eyebrow">OPEN SOURCE WORKSPACE</p>
+          <div class="workspace-title-rule" aria-hidden="true"></div>
+          <h2>AUDIO VISUALIZATION HUB</h2>
+          <p class="workspace-subtitle">SELECT A PROJECT / LAUNCH EXPERIENCE</p>
+        </div>
+        <div class="workspace-meta" aria-label="Workspace metadata">
+          <span>V 1.0</span>
+          <span id="workspaceDate">—</span>
+          <span>WEB AUDIO / VISUAL SYSTEMS</span>
+        </div>
+      </header>
+
+      <section class="hub-stage" aria-labelledby="menuTitle">
+        <div class="stage-frame">
+          <span class="frame-corner frame-corner--tl" aria-hidden="true"></span>
+          <span class="frame-corner frame-corner--tr" aria-hidden="true"></span>
+          <span class="frame-corner frame-corner--bl" aria-hidden="true"></span>
+          <span class="frame-corner frame-corner--br" aria-hidden="true"></span>
+
+          <div class="stage-heading">
+            <div>
+              <p class="stage-kicker">PROJECT DIRECTORY</p>
+              <h3 id="menuTitle">SELECT VISUALIZER</h3>
+            </div>
+            <div class="stage-index" aria-live="polite">
+              <span id="activeIndex">01</span>
+              <span aria-hidden="true">/</span>
+              <span id="totalProjects">04</span>
+            </div>
+          </div>
+
+          <nav class="project-menu" id="projectMenu" aria-label="Audio visualization projects"></nav>
+
+          <div class="project-detail" id="projectDetail" aria-live="polite">
+            <div class="project-detail__signal" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div>
+              <span class="project-detail__label">ACTIVE PROJECT</span>
+              <strong id="activeProjectName">BINARY TOWER</strong>
+            </div>
+            <p id="activeProjectDescription">Audio-reactive binary terrain visualization.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer class="workspace-footer">
+        <span>↑ ↓ SELECT</span>
+        <span>ENTER OPEN</span>
+        <span>POINTER HOVER</span>
+      </footer>
+    </main>
+  </div>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
