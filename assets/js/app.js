@@ -18,6 +18,11 @@ const workspaceDate = document.querySelector("#workspaceDate");
 const sidebarDate = document.querySelector("#sidebarDate");
 const canvas = document.querySelector("#showcaseCanvas");
 const showcase = document.querySelector(".showcase");
+const presetButtons = [...document.querySelectorAll("[data-preset]")];
+const shapeToggle = document.querySelector("#shapeToggle");
+const configToggle = document.querySelector("#configToggle");
+const configPanel = document.querySelector("#configPanel");
+const settingInputs = [...document.querySelectorAll("[data-scene-setting]")];
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const projectTotal = hubConfig.projects.length;
@@ -26,6 +31,10 @@ const twoDigit = (value) => String(value).padStart(2, "0");
 let selectedIndex = 0;
 let sidebarCollapsed = false;
 let sceneController = null;
+let activePreset = "blueScifi";
+let shapeVisible = true;
+let wheelLocked = false;
+let wheelAccumulator = 0;
 
 document.documentElement.style.setProperty("--accent", hubConfig.accent);
 totalProjects.textContent = twoDigit(projectTotal);
@@ -136,7 +145,93 @@ function setSidebarCollapsed(collapsed) {
   window.setTimeout(() => sceneController?.resize(), 200);
 }
 
+function formatSettingValue(input, value) {
+  const step = Number(input.step || 1);
+  if (step >= 1) return String(Math.round(value));
+  if (step < 0.001) return value.toFixed(4);
+  if (step < 0.01) return value.toFixed(3);
+  return value.toFixed(2);
+}
+
+function setControlValue(name, value) {
+  const input = document.querySelector(`[data-scene-setting="${name}"]`);
+  const output = document.querySelector(`[data-output-for="${name}"]`);
+  if (!(input instanceof HTMLInputElement)) return;
+  input.value = String(value);
+  if (output) output.textContent = formatSettingValue(input, Number(value));
+}
+
+function activatePreset(preset) {
+  activePreset = preset;
+  presetButtons.forEach((button) => {
+    const isActive = button.dataset.preset === preset;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  const bloomIntensity = preset === "default" ? 1.2 : 0.9;
+  setControlValue("bloomIntensity", bloomIntensity);
+  sceneController?.setSetting("bloomIntensity", bloomIntensity);
+  sceneController?.setPreset(preset);
+}
+
+function setShapeVisible(visible) {
+  shapeVisible = visible;
+  shapeToggle.classList.toggle("is-active", visible);
+  shapeToggle.setAttribute("aria-pressed", String(visible));
+  sceneController?.setShapeVisible(visible);
+}
+
+function bindShowcaseControls() {
+  presetButtons.forEach((button) => {
+    button.addEventListener("click", () => activatePreset(button.dataset.preset));
+  });
+
+  shapeToggle.addEventListener("click", () => setShapeVisible(!shapeVisible));
+
+  configToggle.addEventListener("click", () => {
+    const expanded = configToggle.getAttribute("aria-expanded") === "true";
+    configToggle.setAttribute("aria-expanded", String(!expanded));
+    configToggle.classList.toggle("is-active", !expanded);
+    configPanel.hidden = expanded;
+  });
+
+  settingInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      const name = input.dataset.sceneSetting;
+      const value = Number(input.value);
+      const output = document.querySelector(`[data-output-for="${name}"]`);
+      if (output) output.textContent = formatSettingValue(input, value);
+      sceneController?.setSetting(name, value);
+    });
+  });
+}
+
+function navigateMenu(direction, { focus = false, animate = true } = {}) {
+  selectProject(selectedIndex + direction);
+  if (focus) {
+    projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.focus({ preventScroll: true });
+  }
+  if (animate) sceneController?.nudge(direction);
+}
+
+function handleMenuWheel(event) {
+  event.preventDefault();
+  if (wheelLocked) return;
+  wheelAccumulator += Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+  if (Math.abs(wheelAccumulator) < 18) return;
+
+  const direction = wheelAccumulator > 0 ? 1 : -1;
+  wheelAccumulator = 0;
+  wheelLocked = true;
+  navigateMenu(direction);
+  window.setTimeout(() => {
+    wheelLocked = false;
+  }, 170);
+}
+
 sidebarToggle.addEventListener("click", () => setSidebarCollapsed(!sidebarCollapsed));
+showcase.addEventListener("wheel", handleMenuWheel, { passive: false });
 
 window.addEventListener("keydown", (event) => {
   const target = event.target;
@@ -145,14 +240,12 @@ window.addEventListener("keydown", (event) => {
 
   if (event.key === "ArrowDown" || event.key === "ArrowRight") {
     event.preventDefault();
-    selectProject(selectedIndex + 1);
-    projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.focus({ preventScroll: true });
+    navigateMenu(1, { focus: true });
   }
 
   if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
     event.preventDefault();
-    selectProject(selectedIndex - 1);
-    projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.focus({ preventScroll: true });
+    navigateMenu(-1, { focus: true });
   }
 
   if (event.key === "Enter" && document.activeElement === document.body) {
@@ -168,30 +261,63 @@ class CylindricalShowcase {
     this.cards = [];
     this.textures = new Map();
     this.activeProject = null;
+    this.activePreset = "blueScifi";
     this.rotation = 0;
     this.rotationSpeed = 0.002;
     this.lastDirection = 1;
     this.scrollOffset = 0;
     this.scrollVelocity = 0;
-    this.targetCameraTilt = 0;
     this.dragging = false;
     this.pointerId = null;
     this.lastPointerX = 0;
     this.lastPointerY = 0;
     this.pendingProjectToken = 0;
     this.frameId = 0;
+    this.mousePosition = { x: 0, y: 0 };
+    this.smoothMousePosition = { x: 0, y: 0 };
+    this.targetZoom = 11;
+    this.currentZoom = 11;
 
     this.instanceCount = 20;
-    this.imagesPerTurn = 6;
-    this.radius = 6.4;
-    this.spiralStep = 1.48;
-    this.totalHeight = this.instanceCount * this.spiralStep;
+    this.settings = {
+      imageScale: 0.83,
+      radius: 6.4,
+      spiralStep: 1.48,
+      imagesPerTurn: 6,
+      curvature: 1.5,
+      momentum: 0.87,
+      autoRotateSpeed: 0.002,
+      scrollRotateForce: 1.75,
+      maxRotationSpeed: 0.15,
+      rotationSmoothing: 0.09,
+      scrollAdvanceSpeed: 0.17,
+      opacity: 1,
+      scanLines: 0.6,
+      flickerIntensity: 0.18,
+      bloomIntensity: 0.9,
+      torusScale: 2.3,
+      torusOpacity: 0.8,
+      gridSize: 0.45,
+      subdivisions: 2,
+      majorLineWidth: 0.005,
+      minorLineWidth: 0.004,
+      dotSize: 0.011,
+      majorLineOpacity: 0.46,
+      minorLineOpacity: 0.14,
+      dotOpacity: 1,
+      bgOpacity: 0.51,
+      tileX: 17,
+      tileY: 5,
+      horizontalFade: 0.1,
+      horizontalFadeSoftness: 0.7
+    };
+    this.totalHeight = this.instanceCount * this.settings.spiralStep;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x000000);
 
     this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 120);
-    this.camera.position.set(0, 0, 12);
+    this.camera.position.set(0, 0, 11);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -206,7 +332,7 @@ class CylindricalShowcase {
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.42, 0.08);
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.65, 0.01);
     this.composer.addPass(this.bloomPass);
 
     this.textureLoader = new THREE.TextureLoader();
@@ -222,83 +348,129 @@ class CylindricalShowcase {
   }
 
   createBackgroundGrid() {
-    const positions = [];
-    const gridRadius = 28;
-    const minY = -42;
-    const maxY = 42;
-    const radialSegments = 72;
-    const ringSegments = 144;
+    const vertexShader = `
+      varying vec2 vUv;
 
-    for (let i = 0; i < radialSegments; i += 1) {
-      const angle = (i / radialSegments) * Math.PI * 2;
-      const x = Math.sin(angle) * gridRadius;
-      const z = Math.cos(angle) * gridRadius;
-      positions.push(x, minY, z, x, maxY, z);
-    }
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
 
-    for (let y = minY; y <= maxY; y += 1.15) {
-      for (let i = 0; i < ringSegments; i += 1) {
-        const angleA = (i / ringSegments) * Math.PI * 2;
-        const angleB = ((i + 1) / ringSegments) * Math.PI * 2;
-        positions.push(
-          Math.sin(angleA) * gridRadius,
-          y,
-          Math.cos(angleA) * gridRadius,
-          Math.sin(angleB) * gridRadius,
-          y,
-          Math.cos(angleB) * gridRadius
+    const fragmentShader = `
+      precision highp float;
+
+      uniform float uGridSize;
+      uniform float uSubdivisions;
+      uniform float uMajorLineWidth;
+      uniform float uMinorLineWidth;
+      uniform float uDotSize;
+      uniform vec3 uMajorLineColor;
+      uniform vec3 uMinorLineColor;
+      uniform vec3 uDotColor;
+      uniform float uMajorLineOpacity;
+      uniform float uMinorLineOpacity;
+      uniform float uDotOpacity;
+      uniform vec3 uBgColor;
+      uniform float uBgOpacity;
+      uniform float uTileX;
+      uniform float uTileY;
+      uniform float uHorizontalFade;
+      uniform float uHorizontalFadeSoftness;
+
+      varying vec2 vUv;
+
+      void main() {
+        vec2 uv = vec2(vUv.x * uTileX, vUv.y * uTileY);
+
+        float cellSize = uGridSize;
+        vec2 majorGrid = mod(uv, cellSize);
+        vec2 majorDist = min(majorGrid, cellSize - majorGrid);
+        float majorLine = min(majorDist.x, majorDist.y);
+        float majorMask = 1.0 - smoothstep(0.0, uMajorLineWidth, majorLine);
+
+        float subCellSize = cellSize / uSubdivisions;
+        vec2 minorGrid = mod(uv, subCellSize);
+        vec2 minorDist = min(minorGrid, subCellSize - minorGrid);
+        float minorLine = min(minorDist.x, minorDist.y);
+        float minorMask = 1.0 - smoothstep(0.0, uMinorLineWidth, minorLine);
+        minorMask *= 1.0 - majorMask;
+
+        vec2 nearestMajor = floor(uv / cellSize + 0.5) * cellSize;
+        float distToDot = length(uv - nearestMajor);
+        float dotMask = 1.0 - smoothstep(0.0, uDotSize, distToDot);
+
+        float horzDist = abs(vUv.x - 0.5) * 2.0;
+        float horzMask = smoothstep(
+          uHorizontalFade,
+          uHorizontalFade + uHorizontalFadeSoftness,
+          horzDist
         );
-      }
-    }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    const material = new THREE.LineBasicMaterial({
-      color: new THREE.Color(hubConfig.accent),
+        vec3 color = uBgColor;
+        float alpha = uBgOpacity;
+
+        color = mix(color, uMinorLineColor, minorMask * uMinorLineOpacity);
+        alpha = max(alpha, minorMask * uMinorLineOpacity);
+
+        color = mix(color, uMajorLineColor, majorMask * uMajorLineOpacity);
+        alpha = max(alpha, majorMask * uMajorLineOpacity);
+
+        color = mix(color, uDotColor, dotMask * uDotOpacity);
+        alpha = max(alpha, dotMask * uDotOpacity);
+
+        alpha *= horzMask;
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
+
+    this.gridUniforms = {
+      uGridSize: { value: this.settings.gridSize },
+      uSubdivisions: { value: this.settings.subdivisions },
+      uMajorLineWidth: { value: this.settings.majorLineWidth },
+      uMinorLineWidth: { value: this.settings.minorLineWidth },
+      uDotSize: { value: this.settings.dotSize },
+      uMajorLineColor: { value: new THREE.Color(hubConfig.accent) },
+      uMinorLineColor: { value: new THREE.Color(hubConfig.accent) },
+      uDotColor: { value: new THREE.Color(hubConfig.accent) },
+      uMajorLineOpacity: { value: this.settings.majorLineOpacity },
+      uMinorLineOpacity: { value: this.settings.minorLineOpacity },
+      uDotOpacity: { value: this.settings.dotOpacity },
+      uBgColor: { value: new THREE.Color("#001d50") },
+      uBgOpacity: { value: this.settings.bgOpacity },
+      uTileX: { value: this.settings.tileX },
+      uTileY: { value: this.settings.tileY },
+      uHorizontalFade: { value: this.settings.horizontalFade },
+      uHorizontalFadeSoftness: { value: this.settings.horizontalFadeSoftness }
+    };
+
+    const geometry = new THREE.CylinderGeometry(32, 32, 90, 64, 1, true);
+    const material = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms: this.gridUniforms,
+      side: THREE.BackSide,
       transparent: true,
-      opacity: 0.13,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
+      depthWrite: false
     });
 
-    this.grid = new THREE.LineSegments(geometry, material);
-    this.grid.renderOrder = -10;
+    this.grid = new THREE.Mesh(geometry, material);
+    this.grid.renderOrder = -1;
     this.scene.add(this.grid);
-
-    const pointGeometry = new THREE.BufferGeometry();
-    const pointPositions = [];
-    for (let y = -36; y <= 36; y += 2.3) {
-      for (let i = 0; i < 48; i += 1) {
-        const angle = (i / 48) * Math.PI * 2;
-        pointPositions.push(Math.sin(angle) * 27.9, y, Math.cos(angle) * 27.9);
-      }
-    }
-    pointGeometry.setAttribute("position", new THREE.Float32BufferAttribute(pointPositions, 3));
-    const pointMaterial = new THREE.PointsMaterial({
-      color: new THREE.Color("#4ca0ff"),
-      size: 0.028,
-      transparent: true,
-      opacity: 0.58,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
-    });
-    this.gridPoints = new THREE.Points(pointGeometry, pointMaterial);
-    this.scene.add(this.gridPoints);
   }
 
   createWireframeShape() {
     const geometry = new THREE.TorusGeometry(1, 0.35, 16, 32);
     const material = new THREE.MeshBasicMaterial({
-      color: new THREE.Color("#4ca0ff"),
+      color: new THREE.Color(hubConfig.accent),
       wireframe: true,
       transparent: true,
-      opacity: 0.82,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      opacity: this.settings.torusOpacity,
+      side: THREE.FrontSide
     });
 
     this.torus = new THREE.Mesh(geometry, material);
-    this.torus.scale.setScalar(2.3);
+    this.torus.scale.setScalar(this.settings.torusScale);
     this.torus.rotation.set(-0.5, 0, -1.95);
     this.scene.add(this.torus);
   }
@@ -312,19 +484,19 @@ class CylindricalShowcase {
         uAccentBright: { value: new THREE.Color("#4ca0ff") },
         uOpacity: { value: 1 },
         uDepthFade: { value: 1 },
-        uFlicker: { value: 0.15 },
-        uChromatic: { value: 0.006 }
+        uFlicker: { value: this.settings.flickerIntensity },
+        uChromatic: { value: 0.006 },
+        uCurvature: { value: this.settings.curvature },
+        uScanLines: { value: this.settings.scanLines }
       },
       vertexShader: `
+        uniform float uCurvature;
         varying vec2 vUv;
-        varying float vCurve;
 
         void main() {
           vUv = uv;
           vec3 transformed = position;
-          float curve = position.x * position.x * 0.055;
-          transformed.z -= curve;
-          vCurve = curve;
+          transformed.z -= position.x * position.x * uCurvature * 0.0366667;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
         }
       `,
@@ -339,9 +511,9 @@ class CylindricalShowcase {
         uniform float uDepthFade;
         uniform float uFlicker;
         uniform float uChromatic;
+        uniform float uScanLines;
 
         varying vec2 vUv;
-        varying float vCurve;
 
         float roundedBox(vec2 p, vec2 b, float r) {
           vec2 q = abs(p) - b + r;
@@ -363,10 +535,11 @@ class CylindricalShowcase {
           float radius = mix(0.08, 0.49, luma);
           float dotMask = 1.0 - smoothstep(radius - 0.075, radius, length(cell));
 
-          float scan = 0.82 + 0.18 * sin((uv.y * 760.0) + uTime * 15.0);
-          vec3 imageBlue = mix(uAccent * 0.12, uAccentBright * (0.72 + luma * 1.1), dotMask);
-          imageBlue *= scan;
-          imageBlue += source * 0.075;
+          float scanWave = 0.82 + 0.18 * sin((uv.y * 760.0) + uTime * 15.0);
+          float scan = mix(1.0, scanWave, uScanLines);
+          vec3 imageColor = mix(uAccent * 0.12, uAccentBright * (0.72 + luma * 1.1), dotMask);
+          imageColor *= scan;
+          imageColor += source * 0.075;
 
           vec2 centered = uv - 0.5;
           float panel = roundedBox(centered, vec2(0.495), 0.012);
@@ -386,8 +559,7 @@ class CylindricalShowcase {
           float flickerWave = sin(uTime * 67.0 + uv.y * 9.0) * 0.5 + 0.5;
           float flicker = 1.0 - uFlicker * 0.14 * flickerWave;
 
-          vec3 color = imageBlue;
-          color = mix(color, uAccentBright * 2.1, max(border, corner));
+          vec3 color = mix(imageColor, uAccentBright * 2.1, max(border, corner));
           color *= flicker;
 
           float alpha = panelMask * uOpacity * uDepthFade;
@@ -409,11 +581,19 @@ class CylindricalShowcase {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.frustumCulled = false;
       mesh.userData.index = i;
-      mesh.userData.baseAngle = i * ((Math.PI * 2) / this.imagesPerTurn);
-      mesh.userData.baseY = -(this.totalHeight / 2) + i * this.spiralStep;
       this.cards.push(mesh);
       this.scene.add(mesh);
     }
+
+    this.updateCardLayout();
+  }
+
+  updateCardLayout() {
+    this.totalHeight = this.instanceCount * this.settings.spiralStep;
+    this.cards.forEach((card, index) => {
+      card.userData.baseAngle = index * ((Math.PI * 2) / this.settings.imagesPerTurn);
+      card.userData.baseY = -(this.totalHeight / 2) + index * this.settings.spiralStep;
+    });
   }
 
   loadTexture(path) {
@@ -457,13 +637,68 @@ class CylindricalShowcase {
     }
   }
 
-  bindInput() {
-    this.onWheel = (event) => {
-      event.preventDefault();
-      const impulse = THREE.MathUtils.clamp(event.deltaY * 0.00075, -0.32, 0.32);
-      this.scrollVelocity += impulse;
-    };
+  setPreset(preset) {
+    this.activePreset = preset;
+    const isDefault = preset === "default";
+    const accent = new THREE.Color(isDefault ? "#ffffff" : hubConfig.accent);
+    const accentBright = new THREE.Color(isDefault ? "#ffffff" : "#4ca0ff");
 
+    this.cards.forEach((card) => {
+      card.material.uniforms.uAccent.value.copy(accent);
+      card.material.uniforms.uAccentBright.value.copy(accentBright);
+    });
+  }
+
+  setShapeVisible(visible) {
+    this.torus.visible = visible;
+  }
+
+  setSetting(name, value) {
+    if (!(name in this.settings) || !Number.isFinite(value)) return;
+    this.settings[name] = name === "imagesPerTurn" ? Math.round(value) : value;
+
+    if (["radius", "spiralStep", "imagesPerTurn"].includes(name)) {
+      this.updateCardLayout();
+    }
+
+    if (name === "curvature") {
+      this.cards.forEach((card) => {
+        card.material.uniforms.uCurvature.value = value;
+      });
+    }
+
+    if (name === "scanLines") {
+      this.cards.forEach((card) => {
+        card.material.uniforms.uScanLines.value = value;
+      });
+    }
+
+    if (name === "flickerIntensity") {
+      this.cards.forEach((card) => {
+        card.material.uniforms.uFlicker.value = value;
+      });
+    }
+
+    if (name === "bloomIntensity") this.bloomPass.strength = value;
+    if (name === "torusOpacity") this.torus.material.opacity = value;
+
+    const gridUniformMap = {
+      gridSize: "uGridSize",
+      majorLineOpacity: "uMajorLineOpacity",
+      minorLineOpacity: "uMinorLineOpacity",
+      dotOpacity: "uDotOpacity",
+      bgOpacity: "uBgOpacity"
+    };
+    const uniformName = gridUniformMap[name];
+    if (uniformName) this.gridUniforms[uniformName].value = value;
+  }
+
+  nudge(direction) {
+    this.lastDirection = direction < 0 ? -1 : 1;
+    this.scrollVelocity += this.lastDirection * 0.18;
+  }
+
+  bindInput() {
     this.onPointerDown = (event) => {
       this.dragging = true;
       this.pointerId = event.pointerId;
@@ -494,11 +729,16 @@ class CylindricalShowcase {
       }
     };
 
-    this.canvas.addEventListener("wheel", this.onWheel, { passive: false });
+    this.onMouseMove = (event) => {
+      this.mousePosition.x = (event.clientX / window.innerWidth) * 2 - 1;
+      this.mousePosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    };
+
     this.canvas.addEventListener("pointerdown", this.onPointerDown);
     this.canvas.addEventListener("pointermove", this.onPointerMove);
     this.canvas.addEventListener("pointerup", this.onPointerUp);
     this.canvas.addEventListener("pointercancel", this.onPointerUp);
+    window.addEventListener("mousemove", this.onMouseMove, { passive: true });
   }
 
   resize() {
@@ -518,50 +758,76 @@ class CylindricalShowcase {
     const elapsed = this.clock.elapsedTime;
     const motionScale = reducedMotion.matches ? 0.16 : 1;
 
-    this.scrollVelocity *= this.dragging ? 0.93 : 0.87;
+    this.scrollVelocity *= this.dragging ? 0.93 : this.settings.momentum;
     if (Math.abs(this.scrollVelocity) > 0.00001) {
       this.lastDirection = Math.sign(this.scrollVelocity);
     }
 
-    const autoSpeed = 0.002 * this.lastDirection * motionScale;
-    const targetRotationSpeed = autoSpeed + this.scrollVelocity * 1.75;
-    this.rotationSpeed += (THREE.MathUtils.clamp(targetRotationSpeed, -0.15, 0.15) - this.rotationSpeed) * 0.09;
+    const autoSpeed = this.settings.autoRotateSpeed * this.lastDirection * motionScale;
+    const targetRotationSpeed = autoSpeed + this.scrollVelocity * this.settings.scrollRotateForce;
+    const clampedRotationSpeed = THREE.MathUtils.clamp(
+      targetRotationSpeed,
+      -this.settings.maxRotationSpeed,
+      this.settings.maxRotationSpeed
+    );
+    this.rotationSpeed +=
+      (clampedRotationSpeed - this.rotationSpeed) * this.settings.rotationSmoothing;
     this.rotation += this.rotationSpeed * delta * 60;
-    this.scrollOffset += this.scrollVelocity * 10.2 * motionScale;
+    this.scrollOffset += this.scrollVelocity * this.settings.scrollAdvanceSpeed * 60 * motionScale;
 
     const squeeze = Math.min(Math.abs(this.scrollVelocity) * 3, 0.45);
 
     this.cards.forEach((card, index) => {
       const angle = card.userData.baseAngle + this.rotation;
       const rawY = card.userData.baseY + this.scrollOffset;
-      const y = THREE.MathUtils.euclideanModulo(rawY + this.totalHeight / 2, this.totalHeight) - this.totalHeight / 2;
-      const x = Math.sin(angle) * this.radius;
-      const z = Math.cos(angle) * this.radius;
+      const y =
+        THREE.MathUtils.euclideanModulo(rawY + this.totalHeight / 2, this.totalHeight) -
+        this.totalHeight / 2;
+      const x = Math.sin(angle) * this.settings.radius;
+      const z = Math.cos(angle) * this.settings.radius;
 
       card.position.set(x, y, z);
       card.rotation.set(0, angle, 0);
-      card.scale.set(0.83 * (1 - squeeze * 0.28), 0.83 * (1 + squeeze * 0.13), 0.83);
+      card.scale.set(
+        this.settings.imageScale * (1 - squeeze * 0.28),
+        this.settings.imageScale * (1 + squeeze * 0.13),
+        this.settings.imageScale
+      );
 
-      const frontness = THREE.MathUtils.smoothstep(z, -this.radius * 0.65, this.radius);
+      const frontness = THREE.MathUtils.smoothstep(
+        z,
+        -this.settings.radius * 0.65,
+        this.settings.radius
+      );
       const verticalFade = 1 - THREE.MathUtils.smoothstep(Math.abs(y), 4.0, 9.5);
       const depthFade = THREE.MathUtils.clamp(frontness * verticalFade, 0.04, 1);
       card.material.uniforms.uTime.value = elapsed;
       card.material.uniforms.uDepthFade.value = depthFade;
-      card.material.uniforms.uOpacity.value = 0.32 + depthFade * 0.68;
-      card.renderOrder = Math.round((z + this.radius) * 100) + index;
+      card.material.uniforms.uOpacity.value = (0.32 + depthFade * 0.68) * this.settings.opacity;
+      card.renderOrder = Math.round((z + this.settings.radius) * 100) + index;
     });
 
     const torusTargetSpeed = 0.004 * this.lastDirection + this.scrollVelocity * 1.75;
-    this.torus.rotation.y += THREE.MathUtils.clamp(torusTargetSpeed, -0.16, 0.16) * delta * 60;
-    this.torus.rotation.x = -0.5 + Math.sin(elapsed * 0.25) * 0.035;
+    this.torus.rotation.y += THREE.MathUtils.clamp(torusTargetSpeed, -0.15, 0.15) * delta * 60;
+    this.torus.rotation.x = -0.5;
     this.torus.rotation.z = -1.95;
-    const torusScale = 2.3 - Math.min(Math.abs(this.scrollVelocity) * 2.2, 0.42);
-    this.torus.scale.lerp(new THREE.Vector3(torusScale, torusScale, torusScale), 0.06);
+    const torusScale = this.settings.torusScale - Math.min(Math.abs(this.scrollVelocity) * 0.2, 0.42);
+    this.torus.scale.lerp(new THREE.Vector3(torusScale, torusScale, torusScale), 0.04);
 
-    this.targetCameraTilt = THREE.MathUtils.clamp(this.scrollVelocity * 0.9, -0.08, 0.08);
-    this.camera.rotation.z += (this.targetCameraTilt - this.camera.rotation.z) * 0.055;
-    this.grid.rotation.y = this.rotation * 0.035;
-    this.gridPoints.rotation.y = this.rotation * 0.035;
+    this.smoothMousePosition.x += (this.mousePosition.x - this.smoothMousePosition.x) * 0.06;
+    this.smoothMousePosition.y += (this.mousePosition.y - this.smoothMousePosition.y) * 0.06;
+    this.camera.position.x = this.smoothMousePosition.x * 0.8;
+    this.camera.position.y = this.smoothMousePosition.y * 1.2;
+
+    const absoluteVelocity = Math.abs(this.scrollVelocity);
+    this.targetZoom += absoluteVelocity * 0.05;
+    this.targetZoom = THREE.MathUtils.clamp(this.targetZoom, 11, 28.5);
+    this.currentZoom += (this.targetZoom - this.currentZoom) * 0.1;
+    this.camera.position.z = this.currentZoom;
+    this.targetZoom = THREE.MathUtils.lerp(this.targetZoom, 11, 0.9);
+    this.camera.lookAt(0, 0.1, 0);
+
+    this.grid.position.copy(this.camera.position);
 
     this.composer.render();
     this.frameId = requestAnimationFrame(this.animate);
@@ -576,6 +842,7 @@ function showWebGLError(message) {
 }
 
 renderProjects();
+bindShowcaseControls();
 
 if (window.innerWidth <= 980) {
   setSidebarCollapsed(true);
@@ -584,6 +851,8 @@ if (window.innerWidth <= 980) {
 try {
   sceneController = new CylindricalShowcase(canvas, showcase);
   sceneController.setProject(hubConfig.projects[selectedIndex]);
+  sceneController.setPreset(activePreset);
+  sceneController.setShapeVisible(shapeVisible);
 } catch (error) {
   console.error(error);
   showWebGLError("The 3D showcase could not start. Enable WebGL hardware acceleration and reload the page.");
