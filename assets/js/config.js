@@ -13,19 +13,22 @@ export const hubConfig = Object.freeze({
           id: "codex",
           name: "CODEX",
           description: "A centralized software and code workspace.",
-          href: "https://codex-production-4a6a.up.railway.app/"
+          href: "https://codex-production-4a6a.up.railway.app/",
+          visualizerId: "codex"
         }),
         Object.freeze({
           id: "homeplate",
           name: "HOMEPLATE",
           description: "Recipe, cookbook, and meal-planning software.",
-          href: "https://dinner-app-production-55b7.up.railway.app/"
+          href: "https://dinner-app-production-55b7.up.railway.app/",
+          visualizerId: "homeplate"
         }),
         Object.freeze({
           id: "taskcom",
           name: "TASKCOM",
           description: "Project and task command software for structured execution.",
-          href: "https://projecttracker-production-9bab.up.railway.app/"
+          href: "https://projecttracker-production-9bab.up.railway.app/",
+          visualizerId: "taskcom"
         })
       ])
     }),
@@ -122,6 +125,51 @@ export const hubConfig = Object.freeze({
     })
   ]),
   projects: Object.freeze([
+    Object.freeze({
+      id: "codex",
+      name: "Codex",
+      shortName: "Codex",
+      description: "A centralized software and code workspace.",
+      category: "APP / CODE",
+      href: "https://codex-production-4a6a.up.railway.app/",
+      images: Object.freeze([
+        "assets/images/showcase/codex.png",
+        "assets/images/showcase/codex.png",
+        "assets/images/showcase/codex.png",
+        "assets/images/showcase/codex.png",
+        "assets/images/showcase/codex.png"
+      ])
+    }),
+    Object.freeze({
+      id: "homeplate",
+      name: "HomePlate",
+      shortName: "HomePlate",
+      description: "Recipe, cookbook, and meal-planning software.",
+      category: "APP / MEALS",
+      href: "https://dinner-app-production-55b7.up.railway.app/",
+      images: Object.freeze([
+        "assets/images/showcase/homeplate.png",
+        "assets/images/showcase/homeplate.png",
+        "assets/images/showcase/homeplate.png",
+        "assets/images/showcase/homeplate.png",
+        "assets/images/showcase/homeplate.png"
+      ])
+    }),
+    Object.freeze({
+      id: "taskcom",
+      name: "TaskCom",
+      shortName: "TaskCom",
+      description: "Project and task command software for structured execution.",
+      category: "APP / PROJECTS",
+      href: "https://projecttracker-production-9bab.up.railway.app/",
+      images: Object.freeze([
+        "assets/images/showcase/taskcom.png",
+        "assets/images/showcase/taskcom.png",
+        "assets/images/showcase/taskcom.png",
+        "assets/images/showcase/taskcom.png",
+        "assets/images/showcase/taskcom.png"
+      ])
+    }),
     Object.freeze({
       id: "binary-tower",
       name: "Binary Tower",
