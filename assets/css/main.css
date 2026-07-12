@@ -911,3 +911,61 @@ button:focus-visible {
     transform: none;
   }
 }
+
+
+/* XMB category ordering, centered selection, icon sizing, and PS3 list clearance */
+.xmb-categories {
+  --xmb-category-shift: 0px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: max-content;
+  justify-content: flex-start;
+  transform: translateX(calc(-50% + var(--xmb-category-shift)));
+  transition: transform 320ms cubic-bezier(0.2, 0.72, 0.2, 1);
+  will-change: transform;
+}
+
+.xmb-items-stage {
+  left: 50%;
+  height: 360px;
+}
+
+.xmb-items {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  transition: none;
+}
+
+.xmb-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateY(var(--xmb-item-y, 0px));
+  transition: color 170ms ease, opacity 170ms ease, transform 240ms cubic-bezier(0.2, 0.72, 0.2, 1), text-shadow 170ms ease, font-size 170ms ease;
+  will-change: transform;
+}
+
+.xmb-item.is-active {
+  transform: translateY(var(--xmb-item-y, 0px));
+}
+
+.aigox-logo-link {
+  width: clamp(61px, 5vw, 84px);
+}
+
+@media (max-width: 980px) {
+  .aigox-logo-link {
+    width: 63px;
+  }
+}
+
+@media (max-width: 650px) {
+  .aigox-logo-link {
+    width: 52px;
+  }
+}

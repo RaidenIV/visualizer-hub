@@ -38,6 +38,7 @@ let shapeVisible = true;
 let wheelLocked = false;
 let wheelAccumulator = 0;
 let itemPointerLocked = false;
+let categoryPointerLocked = false;
 
 document.documentElement.style.setProperty("--accent", hubConfig.accent);
 
@@ -84,7 +85,14 @@ function createCategoryButton(category, index) {
     <span class="xmb-category__name">${category.name}</span>
   `;
 
-  button.addEventListener("pointerenter", () => selectCategory(index));
+  button.addEventListener("pointerenter", () => {
+    if (categoryPointerLocked || index === activeCategoryIndex) return;
+    categoryPointerLocked = true;
+    selectCategory(index);
+    window.setTimeout(() => {
+      categoryPointerLocked = false;
+    }, 340);
+  });
   button.addEventListener("focus", () => selectCategory(index));
   button.addEventListener("click", () => selectCategory(index));
   return button;
@@ -121,14 +129,43 @@ function updateCategoryState() {
   });
 }
 
+function updateXmbItemPositions() {
+  const links = [...xmbItems.querySelectorAll(".xmb-item")];
+  if (!links.length) return;
+
+  const selectedIndex = activeItemIndices[activeCategoryIndex];
+  const activeButton = xmbCategories.querySelector(".xmb-category.is-active");
+  const activeIcon = activeButton?.querySelector(".xmb-category__icon-wrap");
+  const activeItem = links[selectedIndex];
+  if (!activeIcon || !activeItem) return;
+
+  const stageBounds = xmbItemsStage.getBoundingClientRect();
+  const iconBounds = activeIcon.getBoundingClientRect();
+  const itemHeight = activeItem.offsetHeight || 40;
+  const itemGap = 8;
+  const itemStep = itemHeight + itemGap;
+  const iconToSelectedGap = Math.max(24, stageBounds.top - iconBounds.bottom);
+  const nearestAboveTop = iconBounds.top - iconToSelectedGap - itemHeight - stageBounds.top;
+
+  links.forEach((link, index) => {
+    const y = index < selectedIndex
+      ? nearestAboveTop - (selectedIndex - index - 1) * itemStep
+      : (index - selectedIndex) * itemStep;
+    link.style.setProperty("--xmb-item-y", `${y}px`);
+  });
+}
+
 function updateXmbStageAnchor() {
   const activeButton = xmbCategories.querySelector(".xmb-category.is-active");
   if (!activeButton) return;
 
-  const menuBounds = xmbMenu.getBoundingClientRect();
-  const buttonBounds = activeButton.getBoundingClientRect();
-  const anchor = buttonBounds.left - menuBounds.left + buttonBounds.width / 2;
-  xmbMenu.style.setProperty("--xmb-anchor-x", `${anchor}px`);
+  const rowCenter = xmbCategories.scrollWidth / 2;
+  const activeCenter = activeButton.offsetLeft + activeButton.offsetWidth / 2;
+  const categoryShift = rowCenter - activeCenter;
+  xmbCategories.style.setProperty("--xmb-category-shift", `${categoryShift}px`);
+  xmbMenu.style.setProperty("--xmb-anchor-x", "50%");
+
+  requestAnimationFrame(updateXmbItemPositions);
 }
 
 function selectVisualizer(index, { syncXmb = false } = {}) {
@@ -160,9 +197,7 @@ function updateXmbSelection({ focus = false, animate = false, direction = 1 } = 
     link.tabIndex = isActive ? 0 : -1;
   });
 
-  const activeItem = xmbItems.querySelector(".xmb-item.is-active");
-  const listOffset = activeItem ? -activeItem.offsetTop : 0;
-  xmbItems.style.setProperty("--xmb-list-offset", `${listOffset}px`);
+  updateXmbItemPositions();
 
   if (selectedItem.visualizerId) {
     const projectIndex = getProjectIndex(selectedItem.visualizerId);

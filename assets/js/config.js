@@ -5,34 +5,34 @@ export const hubConfig = Object.freeze({
   accent: "#0075ff",
   categories: Object.freeze([
     Object.freeze({
-      id: "games",
-      name: "Games",
-      icon: "assets/images/controller.svg",
+      id: "apps",
+      name: "Apps",
+      icon: "assets/images/apps.svg",
       items: Object.freeze([
         Object.freeze({
-          id: "tetron",
-          name: "TETRON",
-          description: "A tactical 3D action sandbox and game laboratory.",
-          href: "https://raideniv.github.io/tetron/"
+          id: "codex",
+          name: "CODEX",
+          description: "A centralized software and code workspace.",
+          href: "https://codex-production-4a6a.up.railway.app/"
         }),
         Object.freeze({
-          id: "capsule-havoc",
-          name: "CAPSULE HAVOC",
-          description: "Fast-paced capsule combat built for the browser.",
-          href: "https://raideniv.github.io/capsule_havoc/"
+          id: "homeplate",
+          name: "HOMEPLATE",
+          description: "Recipe, cookbook, and meal-planning software.",
+          href: "https://dinner-app-production-55b7.up.railway.app/"
         }),
         Object.freeze({
-          id: "project-osea",
-          name: "PROJECT OSEA",
-          description: "An original interactive game project from AIGOX.",
-          href: "https://www.xodiamediagroup.com/osea"
+          id: "taskcom",
+          name: "TASKCOM",
+          description: "Project and task command software for structured execution.",
+          href: "https://projecttracker-production-9bab.up.railway.app/"
         })
       ])
     }),
     Object.freeze({
       id: "audio",
       name: "Audio",
-      icon: "assets/images/music_note.svg",
+      icon: "assets/images/visualizer.svg",
       items: Object.freeze([
         Object.freeze({
           id: "binary-tower",
@@ -61,12 +61,31 @@ export const hubConfig = Object.freeze({
           description: "Volumetric frequency architecture built from animated voxels.",
           href: "https://raideniv.github.io/spectrogramic-voxel-engine/",
           visualizerId: "spectrogramic-voxel-engine"
+        })
+      ])
+    }),
+    Object.freeze({
+      id: "games",
+      name: "Games",
+      icon: "assets/images/controller.svg",
+      items: Object.freeze([
+        Object.freeze({
+          id: "capsule-havoc",
+          name: "CAPSULE HAVOC",
+          description: "Fast-paced capsule combat built for the browser.",
+          href: "https://raideniv.github.io/capsule_havoc/"
         }),
         Object.freeze({
-          id: "beat-detective",
-          name: "BEAT DETECTIVE",
-          description: "Audio analysis utilities for detecting tempo and beat structure.",
-          href: "https://raideniv.github.io/beat_detective/"
+          id: "project-osea",
+          name: "PROJECT OSEA",
+          description: "An original interactive game project from AIGOX.",
+          href: "https://www.xodiamediagroup.com/osea"
+        }),
+        Object.freeze({
+          id: "tetron",
+          name: "TETRON",
+          description: "A tactical 3D action sandbox and game laboratory.",
+          href: "https://raideniv.github.io/tetron/"
         })
       ])
     }),
@@ -75,12 +94,6 @@ export const hubConfig = Object.freeze({
       name: "Tools",
       icon: "assets/images/tools.svg",
       items: Object.freeze([
-        Object.freeze({
-          id: "taskcom",
-          name: "TASKCOM",
-          description: "Project and task command software for structured execution.",
-          href: "https://projecttracker-production-9bab.up.railway.app/"
-        }),
         Object.freeze({
           id: "3d-modeler",
           name: "3D MODELER",
@@ -94,10 +107,10 @@ export const hubConfig = Object.freeze({
           href: "https://raideniv.github.io/audio-converter/"
         }),
         Object.freeze({
-          id: "codex",
-          name: "CODEX",
-          description: "A centralized software and code workspace.",
-          href: "https://codex-production-4a6a.up.railway.app"
+          id: "beat-detective",
+          name: "BEAT DETECTIVE",
+          description: "Audio analysis utilities for detecting tempo and beat structure.",
+          href: "https://raideniv.github.io/beat_detective/"
         }),
         Object.freeze({
           id: "svg-editor",
