@@ -378,10 +378,9 @@ button:focus-visible {
   transition: color 190ms ease, opacity 190ms ease, transform 190ms ease, text-shadow 190ms ease;
 }
 
-.xmb-category:hover,
 .xmb-category:focus-visible {
-  color: rgba(241, 247, 255, 0.86);
-  opacity: 0.86;
+  outline: 1px solid rgba(117, 183, 255, 0.78);
+  outline-offset: 4px;
 }
 
 .xmb-category.is-active {

@@ -37,8 +37,8 @@ let activePreset = "blueScifi";
 let shapeVisible = true;
 let wheelLocked = false;
 let wheelAccumulator = 0;
+let wheelResetTimer = 0;
 let itemPointerLocked = false;
-let categoryPointerLocked = false;
 
 document.documentElement.style.setProperty("--accent", hubConfig.accent);
 
@@ -85,15 +85,6 @@ function createCategoryButton(category, index) {
     <span class="xmb-category__name">${category.name}</span>
   `;
 
-  button.addEventListener("pointerenter", () => {
-    if (categoryPointerLocked || index === activeCategoryIndex) return;
-    categoryPointerLocked = true;
-    selectCategory(index);
-    window.setTimeout(() => {
-      categoryPointerLocked = false;
-    }, 340);
-  });
-  button.addEventListener("focus", () => selectCategory(index));
   button.addEventListener("click", () => selectCategory(index));
   return button;
 }
@@ -358,22 +349,40 @@ function bindShowcaseControls() {
 
 function handleMenuWheel(event) {
   event.preventDefault();
+
+  const primaryDelta = Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+    ? event.deltaY
+    : event.deltaX;
+  if (primaryDelta === 0) return;
+
+  const deltaScale = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+    ? 16
+    : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+      ? window.innerHeight
+      : 1;
+
+  window.clearTimeout(wheelResetTimer);
+  wheelResetTimer = window.setTimeout(() => {
+    wheelAccumulator = 0;
+  }, 140);
+
   if (wheelLocked) return;
 
-  wheelAccumulator += Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-  if (Math.abs(wheelAccumulator) < 18) return;
+  wheelAccumulator += primaryDelta * deltaScale;
+  if (Math.abs(wheelAccumulator) < 12) return;
 
   const direction = wheelAccumulator > 0 ? 1 : -1;
   wheelAccumulator = 0;
   wheelLocked = true;
   navigateXmbItems(direction);
+
   window.setTimeout(() => {
     wheelLocked = false;
   }, 170);
 }
 
 sidebarToggle.addEventListener("click", () => setSidebarCollapsed(!sidebarCollapsed));
-showcase.addEventListener("wheel", handleMenuWheel, { passive: false });
+showcase.addEventListener("wheel", handleMenuWheel, { passive: false, capture: true });
 
 window.addEventListener("keydown", (event) => {
   const target = event.target;

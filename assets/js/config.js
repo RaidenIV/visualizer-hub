@@ -31,7 +31,7 @@ export const hubConfig = Object.freeze({
     }),
     Object.freeze({
       id: "audio",
-      name: "Audio",
+      name: "VISUALIZERS",
       icon: "assets/images/visualizer.svg",
       items: Object.freeze([
         Object.freeze({
