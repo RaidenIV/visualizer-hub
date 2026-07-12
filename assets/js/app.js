@@ -8,16 +8,17 @@ const appShell = document.querySelector("#appShell");
 const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebarToggleIcon = document.querySelector("#sidebarToggleIcon");
 const sidebarProjects = document.querySelector("#sidebarProjects");
-const projectMenu = document.querySelector("#projectMenu");
-const activeIndex = document.querySelector("#activeIndex");
-const totalProjects = document.querySelector("#totalProjects");
 const projectCount = document.querySelector("#projectCount");
-const activeProjectName = document.querySelector("#activeProjectName");
-const activeProjectDescription = document.querySelector("#activeProjectDescription");
 const workspaceDate = document.querySelector("#workspaceDate");
 const sidebarDate = document.querySelector("#sidebarDate");
 const canvas = document.querySelector("#showcaseCanvas");
 const showcase = document.querySelector(".showcase");
+const xmbMenu = document.querySelector("#xmbMenu");
+const xmbCategories = document.querySelector("#xmbCategories");
+const xmbItems = document.querySelector("#xmbItems");
+const xmbItemsStage = document.querySelector("#xmbItemsStage");
+const xmbActiveName = document.querySelector("#xmbActiveName");
+const xmbActiveDescription = document.querySelector("#xmbActiveDescription");
 const presetButtons = [...document.querySelectorAll("[data-preset]")];
 const shapeToggle = document.querySelector("#shapeToggle");
 const configToggle = document.querySelector("#configToggle");
@@ -27,8 +28,14 @@ const settingInputs = [...document.querySelectorAll("[data-scene-setting]")];
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const projectTotal = hubConfig.projects.length;
 const twoDigit = (value) => String(value).padStart(2, "0");
+const audioCategoryIndex = Math.max(
+  0,
+  hubConfig.categories.findIndex((category) => category.id === "audio")
+);
 
-let selectedIndex = 0;
+let selectedProjectIndex = 0;
+let activeCategoryIndex = audioCategoryIndex;
+let activeItemIndices = hubConfig.categories.map(() => 0);
 let sidebarCollapsed = false;
 let sceneController = null;
 let activePreset = "blueScifi";
@@ -36,9 +43,8 @@ let shapeVisible = true;
 let wheelLocked = false;
 let wheelAccumulator = 0;
 
-document.documentElement.style.setProperty("--accent", hubConfig.accent);
-totalProjects.textContent = twoDigit(projectTotal);
 projectCount.textContent = twoDigit(projectTotal);
+document.documentElement.style.setProperty("--accent", hubConfig.accent);
 
 function formatDate(date) {
   return date
@@ -54,27 +60,18 @@ const currentDate = formatDate(new Date());
 workspaceDate.textContent = currentDate;
 sidebarDate.textContent = currentDate;
 
-function createProjectLink(project, index) {
-  const link = document.createElement("a");
-  link.className = "project-link";
-  link.href = project.href;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.dataset.index = String(index);
-  link.setAttribute("aria-label", `Open ${project.name}`);
-  link.innerHTML = `
-    <span class="project-link__number">${twoDigit(index + 1)}</span>
-    <span class="project-link__copy">
-      <strong>${project.name}</strong>
-      <small>${project.category}</small>
-    </span>
-    <span class="project-link__open" aria-hidden="true">↗</span>
-  `;
+function getProjectIndex(projectId) {
+  return hubConfig.projects.findIndex((project) => project.id === projectId);
+}
 
-  link.addEventListener("pointerenter", () => selectProject(index));
-  link.addEventListener("focus", () => selectProject(index));
-  link.addEventListener("click", () => selectProject(index));
-  return link;
+function getVisualizerLocation(projectId) {
+  for (let categoryIndex = 0; categoryIndex < hubConfig.categories.length; categoryIndex += 1) {
+    const itemIndex = hubConfig.categories[categoryIndex].items.findIndex(
+      (item) => item.visualizerId === projectId
+    );
+    if (itemIndex >= 0) return { categoryIndex, itemIndex };
+  }
+  return null;
 }
 
 function createSidebarLink(project, index) {
@@ -89,50 +86,182 @@ function createSidebarLink(project, index) {
     <span class="sidebar-project-link__indicator" aria-hidden="true"></span>
   `;
 
+  const syncProject = () => selectVisualizer(index, { syncXmb: true });
+
   link.addEventListener("click", (event) => {
     event.preventDefault();
-    selectProject(index);
-    projectMenu.querySelector(`[data-index="${index}"]`)?.focus({ preventScroll: true });
+    syncProject();
+    requestAnimationFrame(() => {
+      xmbItems.querySelector(".xmb-item.is-active")?.focus({ preventScroll: true });
+    });
   });
-
-  link.addEventListener("pointerenter", () => selectProject(index));
+  link.addEventListener("pointerenter", syncProject);
   return link;
 }
 
-function renderProjects() {
-  const menuFragment = document.createDocumentFragment();
-  const sidebarFragment = document.createDocumentFragment();
-
+function renderSidebarProjects() {
+  const fragment = document.createDocumentFragment();
   hubConfig.projects.forEach((project, index) => {
-    menuFragment.append(createProjectLink(project, index));
-    sidebarFragment.append(createSidebarLink(project, index));
+    fragment.append(createSidebarLink(project, index));
   });
-
-  projectMenu.replaceChildren(menuFragment);
-  sidebarProjects.replaceChildren(sidebarFragment);
-  selectProject(0);
+  sidebarProjects.replaceChildren(fragment);
 }
 
-function selectProject(index) {
-  selectedIndex = (index + projectTotal) % projectTotal;
-  const project = hubConfig.projects[selectedIndex];
+function createCategoryButton(category, index) {
+  const button = document.createElement("button");
+  button.className = "xmb-category";
+  button.type = "button";
+  button.dataset.index = String(index);
+  button.setAttribute("role", "tab");
+  button.setAttribute("aria-controls", "xmbItems");
+  button.setAttribute("aria-label", `${category.name} category`);
+  button.innerHTML = `
+    <span class="xmb-category__icon-wrap" aria-hidden="true">
+      <img class="xmb-category__icon" src="${category.icon}" alt="" />
+    </span>
+    <span class="xmb-category__name">${category.name}</span>
+  `;
 
-  document.querySelectorAll(".project-link").forEach((link, linkIndex) => {
-    const isActive = linkIndex === selectedIndex;
-    link.classList.toggle("is-active", isActive);
-    link.setAttribute("aria-current", isActive ? "true" : "false");
+  button.addEventListener("pointerenter", () => selectCategory(index));
+  button.addEventListener("focus", () => selectCategory(index));
+  button.addEventListener("click", () => selectCategory(index));
+  return button;
+}
+
+function createXmbItem(item, index) {
+  const link = document.createElement("a");
+  link.className = "xmb-item";
+  link.href = item.href;
+  link.target = item.href.endsWith("svg.html") ? "_self" : "_blank";
+  if (link.target === "_blank") link.rel = "noopener noreferrer";
+  link.dataset.index = String(index);
+  link.innerHTML = `
+    <span class="xmb-item__marker" aria-hidden="true"></span>
+    <span class="xmb-item__name">${item.name}</span>
+    <span class="xmb-item__open" aria-hidden="true">↗</span>
+  `;
+
+  link.addEventListener("pointerenter", () => selectXmbItem(index));
+  link.addEventListener("focus", () => selectXmbItem(index));
+  link.addEventListener("click", () => selectXmbItem(index));
+  return link;
+}
+
+function updateCategoryState() {
+  xmbCategories.querySelectorAll(".xmb-category").forEach((button, index) => {
+    const isActive = index === activeCategoryIndex;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+    button.tabIndex = isActive ? 0 : -1;
   });
+}
+
+function updateXmbStageAnchor() {
+  const activeButton = xmbCategories.querySelector(".xmb-category.is-active");
+  if (!activeButton) return;
+
+  const menuBounds = xmbMenu.getBoundingClientRect();
+  const buttonBounds = activeButton.getBoundingClientRect();
+  const anchor = buttonBounds.left - menuBounds.left + buttonBounds.width / 2;
+  xmbMenu.style.setProperty("--xmb-anchor-x", `${anchor}px`);
+}
+
+function selectVisualizer(index, { syncXmb = false } = {}) {
+  selectedProjectIndex = (index + projectTotal) % projectTotal;
+  const project = hubConfig.projects[selectedProjectIndex];
 
   document.querySelectorAll(".sidebar-project-link").forEach((link, linkIndex) => {
-    const isActive = linkIndex === selectedIndex;
+    const isActive = linkIndex === selectedProjectIndex;
     link.classList.toggle("is-active", isActive);
     link.setAttribute("aria-current", isActive ? "page" : "false");
   });
 
-  activeIndex.textContent = twoDigit(selectedIndex + 1);
-  activeProjectName.textContent = project.name.toUpperCase();
-  activeProjectDescription.textContent = project.description;
   sceneController?.setProject(project);
+
+  if (syncXmb) {
+    const location = getVisualizerLocation(project.id);
+    if (location) {
+      activeItemIndices[location.categoryIndex] = location.itemIndex;
+      selectCategory(location.categoryIndex);
+    }
+  }
+}
+
+function updateXmbSelection({ focus = false, animate = false, direction = 1 } = {}) {
+  const category = hubConfig.categories[activeCategoryIndex];
+  const itemTotal = category.items.length;
+  const selectedItemIndex = (activeItemIndices[activeCategoryIndex] + itemTotal) % itemTotal;
+  activeItemIndices[activeCategoryIndex] = selectedItemIndex;
+  const selectedItem = category.items[selectedItemIndex];
+
+  xmbItems.querySelectorAll(".xmb-item").forEach((link, index) => {
+    const isActive = index === selectedItemIndex;
+    link.classList.toggle("is-active", isActive);
+    link.setAttribute("aria-current", isActive ? "true" : "false");
+    link.tabIndex = isActive ? 0 : -1;
+  });
+
+  xmbActiveName.textContent = selectedItem.name;
+  xmbActiveDescription.textContent = selectedItem.description;
+
+  if (selectedItem.visualizerId) {
+    const projectIndex = getProjectIndex(selectedItem.visualizerId);
+    if (projectIndex >= 0) selectVisualizer(projectIndex);
+  }
+
+  if (animate) sceneController?.nudge(direction);
+  if (focus) xmbItems.querySelector(".xmb-item.is-active")?.focus({ preventScroll: true });
+}
+
+function renderXmbItems() {
+  const category = hubConfig.categories[activeCategoryIndex];
+  const fragment = document.createDocumentFragment();
+  category.items.forEach((item, index) => fragment.append(createXmbItem(item, index)));
+  xmbItems.replaceChildren(fragment);
+  xmbItems.setAttribute("aria-label", `${category.name} links`);
+  updateXmbSelection();
+}
+
+function selectCategory(index, { focus = false } = {}) {
+  const categoryTotal = hubConfig.categories.length;
+  activeCategoryIndex = (index + categoryTotal) % categoryTotal;
+  updateCategoryState();
+  renderXmbItems();
+  requestAnimationFrame(updateXmbStageAnchor);
+
+  if (focus) {
+    xmbCategories
+      .querySelector(`.xmb-category[data-index="${activeCategoryIndex}"]`)
+      ?.focus({ preventScroll: true });
+  }
+}
+
+function selectXmbItem(index, { focus = false, animate = false, direction = 1 } = {}) {
+  const category = hubConfig.categories[activeCategoryIndex];
+  activeItemIndices[activeCategoryIndex] = (index + category.items.length) % category.items.length;
+  updateXmbSelection({ focus, animate, direction });
+}
+
+function renderXmb() {
+  const fragment = document.createDocumentFragment();
+  hubConfig.categories.forEach((category, index) => {
+    fragment.append(createCategoryButton(category, index));
+  });
+  xmbCategories.replaceChildren(fragment);
+  selectCategory(activeCategoryIndex);
+}
+
+function navigateXmbItems(direction, { focus = false } = {}) {
+  const category = hubConfig.categories[activeCategoryIndex];
+  selectXmbItem(activeItemIndices[activeCategoryIndex] + direction, {
+    focus,
+    animate: true,
+    direction
+  });
+}
+
+function navigateCategories(direction, { focus = false } = {}) {
+  selectCategory(activeCategoryIndex + direction, { focus });
 }
 
 function setSidebarCollapsed(collapsed) {
@@ -142,7 +271,10 @@ function setSidebarCollapsed(collapsed) {
   sidebarToggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
   sidebarToggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
   sidebarToggleIcon.textContent = collapsed ? "›" : "‹";
-  window.setTimeout(() => sceneController?.resize(), 200);
+  window.setTimeout(() => {
+    sceneController?.resize();
+    updateXmbStageAnchor();
+  }, 200);
 }
 
 function formatSettingValue(input, value) {
@@ -207,24 +339,17 @@ function bindShowcaseControls() {
   });
 }
 
-function navigateMenu(direction, { focus = false, animate = true } = {}) {
-  selectProject(selectedIndex + direction);
-  if (focus) {
-    projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.focus({ preventScroll: true });
-  }
-  if (animate) sceneController?.nudge(direction);
-}
-
 function handleMenuWheel(event) {
   event.preventDefault();
   if (wheelLocked) return;
+
   wheelAccumulator += Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
   if (Math.abs(wheelAccumulator) < 18) return;
 
   const direction = wheelAccumulator > 0 ? 1 : -1;
   wheelAccumulator = 0;
   wheelLocked = true;
-  navigateMenu(direction);
+  navigateXmbItems(direction);
   window.setTimeout(() => {
     wheelLocked = false;
   }, 170);
@@ -238,18 +363,37 @@ window.addEventListener("keydown", (event) => {
   const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
   if (isTyping || event.altKey || event.ctrlKey || event.metaKey) return;
 
-  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+  if (event.key === "ArrowRight") {
     event.preventDefault();
-    navigateMenu(1, { focus: true });
+    navigateCategories(1, { focus: true });
+    return;
   }
 
-  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+  if (event.key === "ArrowLeft") {
     event.preventDefault();
-    navigateMenu(-1, { focus: true });
+    navigateCategories(-1, { focus: true });
+    return;
   }
 
-  if (event.key === "Enter" && document.activeElement === document.body) {
-    projectMenu.querySelector(`[data-index="${selectedIndex}"]`)?.click();
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    navigateXmbItems(1, { focus: true });
+    return;
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    navigateXmbItems(-1, { focus: true });
+    return;
+  }
+
+  if (
+    event.key === "Enter" &&
+    !(document.activeElement instanceof HTMLAnchorElement) &&
+    !(document.activeElement instanceof HTMLButtonElement)
+  ) {
+    event.preventDefault();
+    xmbItems.querySelector(".xmb-item.is-active")?.click();
   }
 });
 
@@ -841,7 +985,8 @@ function showWebGLError(message) {
   showcase.append(error);
 }
 
-renderProjects();
+renderSidebarProjects();
+renderXmb();
 bindShowcaseControls();
 
 if (window.innerWidth <= 980) {
@@ -850,7 +995,7 @@ if (window.innerWidth <= 980) {
 
 try {
   sceneController = new CylindricalShowcase(canvas, showcase);
-  sceneController.setProject(hubConfig.projects[selectedIndex]);
+  sceneController.setProject(hubConfig.projects[selectedProjectIndex]);
   sceneController.setPreset(activePreset);
   sceneController.setShapeVisible(shapeVisible);
 } catch (error) {
@@ -858,4 +1003,11 @@ try {
   showWebGLError("The 3D showcase could not start. Enable WebGL hardware acceleration and reload the page.");
 }
 
-window.addEventListener("resize", () => sceneController?.resize(), { passive: true });
+window.addEventListener(
+  "resize",
+  () => {
+    sceneController?.resize();
+    updateXmbStageAnchor();
+  },
+  { passive: true }
+);

@@ -18,7 +18,7 @@
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#projectMenu">Skip to project menu</a>
+  <a class="skip-link" href="#xmbMenu">Skip to cross media bar</a>
 
   <div class="app-shell" id="appShell">
     <aside class="sidebar" id="sidebar" aria-label="Audio visualization hub sidebar">
@@ -209,29 +209,22 @@
         </div>
       </header>
 
-      <section class="center-menu" aria-label="Visualizer selection">
-        <div class="menu-heading">
-          <span id="activeIndex">01</span>
-          <div>
-            <p>PROJECT DIRECTORY</p>
-            <h3 id="menuTitle">VISUALIZERS</h3>
+      <section class="xmb-menu" id="xmbMenu" aria-label="AIGOX cross media bar">
+        <div class="xmb-categories" id="xmbCategories" role="tablist" aria-label="Media categories"></div>
+
+        <div class="xmb-items-stage" id="xmbItemsStage">
+          <nav class="xmb-items" id="xmbItems" aria-label="Selected category items"></nav>
+          <div class="xmb-selection-copy" aria-live="polite">
+            <strong id="xmbActiveName">BINARY TOWER</strong>
+            <p id="xmbActiveDescription">Audio-reactive binary terrain visualization.</p>
           </div>
-          <span class="menu-total">/ <span id="totalProjects">04</span></span>
-        </div>
-
-        <nav class="project-menu" id="projectMenu" aria-label="Audio visualization projects"></nav>
-
-        <div class="active-project" aria-live="polite">
-          <span>ACTIVE PROJECT</span>
-          <strong id="activeProjectName">BINARY TOWER</strong>
-          <p id="activeProjectDescription">Audio-reactive binary terrain visualization.</p>
         </div>
       </section>
 
       <div class="showcase-instructions" aria-hidden="true">
-        <span>SCROLL TO SELECT / DRAG TO ROTATE</span>
-        <span>↑ ↓ SELECT</span>
-        <span>ENTER OPEN</span>
+        <span>SCROLL / ↑ ↓ SELECT</span>
+        <span>← → CATEGORY</span>
+        <span>ENTER OPEN / DRAG TO ROTATE</span>
       </div>
     </main>
   </div>

@@ -1,9 +1,113 @@
 /**
- * Project content, destinations, and image sets for the cylindrical gallery.
- * Replace the image paths inside a project to give that visualizer its own screenshots.
+ * AIGOX XMB navigation, project destinations, and visualizer image sets.
  */
 export const hubConfig = Object.freeze({
   accent: "#0075ff",
+  categories: Object.freeze([
+    Object.freeze({
+      id: "games",
+      name: "Games",
+      icon: "assets/images/controller.svg",
+      items: Object.freeze([
+        Object.freeze({
+          id: "tetron",
+          name: "TETRON",
+          description: "A tactical 3D action sandbox and game laboratory.",
+          href: "https://raideniv.github.io/tetron/"
+        }),
+        Object.freeze({
+          id: "capsule-havoc",
+          name: "CAPSULE HAVOC",
+          description: "Fast-paced capsule combat built for the browser.",
+          href: "https://raideniv.github.io/capsule_havoc/"
+        }),
+        Object.freeze({
+          id: "project-osea",
+          name: "PROJECT OSEA",
+          description: "An original interactive game project from AIGOX.",
+          href: "https://www.xodiamediagroup.com/osea"
+        })
+      ])
+    }),
+    Object.freeze({
+      id: "audio",
+      name: "Audio",
+      icon: "assets/images/music_note.svg",
+      items: Object.freeze([
+        Object.freeze({
+          id: "binary-tower",
+          name: "BINARY TOWER",
+          description: "Audio-reactive binary terrain visualization.",
+          href: "https://raideniv.github.io/binary-tower/",
+          visualizerId: "binary-tower"
+        }),
+        Object.freeze({
+          id: "galaxy",
+          name: "GALAXY",
+          description: "A deep-space particle field shaped by sound and motion.",
+          href: "https://raideniv.github.io/galaxy-visualizer/",
+          visualizerId: "galaxy"
+        }),
+        Object.freeze({
+          id: "particle-accelerator",
+          name: "PARTICLE ACCELERATOR",
+          description: "Reactive energy streams driven through a kinetic particle system.",
+          href: "https://www.xodiamediagroup.com/vis",
+          visualizerId: "particle-accelerator"
+        }),
+        Object.freeze({
+          id: "spectrogramic-voxel-engine",
+          name: "SPECTROGRAMIC VOXEL ENGINE",
+          description: "Volumetric frequency architecture built from animated voxels.",
+          href: "https://raideniv.github.io/spectrogramic-voxel-engine/",
+          visualizerId: "spectrogramic-voxel-engine"
+        }),
+        Object.freeze({
+          id: "beat-detective",
+          name: "BEAT DETECTIVE",
+          description: "Audio analysis utilities for detecting tempo and beat structure.",
+          href: "https://raideniv.github.io/beat_detective/"
+        })
+      ])
+    }),
+    Object.freeze({
+      id: "tools",
+      name: "Tools",
+      icon: "assets/images/tools.svg",
+      items: Object.freeze([
+        Object.freeze({
+          id: "taskcom",
+          name: "TASKCOM",
+          description: "Project and task command software for structured execution.",
+          href: "https://projecttracker-production-9bab.up.railway.app/"
+        }),
+        Object.freeze({
+          id: "3d-modeler",
+          name: "3D MODELER",
+          description: "Browser-based tools for building and previewing 3D assets.",
+          href: "https://www.xodiamediagroup.com/modeler"
+        }),
+        Object.freeze({
+          id: "audio-converter",
+          name: "AUDIO CONVERTER",
+          description: "A focused utility for converting audio files in the browser.",
+          href: "https://raideniv.github.io/audio-converter/"
+        }),
+        Object.freeze({
+          id: "codex",
+          name: "CODEX",
+          description: "A centralized software and code workspace.",
+          href: "https://codex-production-4a6a.up.railway.app"
+        }),
+        Object.freeze({
+          id: "svg-editor",
+          name: "SVG EDITOR",
+          description: "Create, edit, combine, and export scalable vector graphics.",
+          href: "svg.html"
+        })
+      ])
+    })
+  ]),
   projects: Object.freeze([
     Object.freeze({
       id: "binary-tower",
