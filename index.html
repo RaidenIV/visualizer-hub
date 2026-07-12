@@ -48,14 +48,6 @@
         </div>
       </header>
 
-      <section class="sidebar-section" aria-labelledby="projectIndexTitle">
-        <div class="section-heading">
-          <span id="projectIndexTitle">PROJECT INDEX</span>
-          <span id="projectCount">04</span>
-        </div>
-        <nav class="sidebar-projects" id="sidebarProjects" aria-label="Project index"></nav>
-      </section>
-
       <section class="sidebar-section sidebar-section--controls" aria-labelledby="visualControlsTitle">
         <div class="section-heading">
           <span id="visualControlsTitle">VISUAL SETTINGS</span>
@@ -70,6 +62,10 @@
         <div class="showcase-control-row" role="group" aria-label="Visualization controls">
           <button class="showcase-control is-active" id="shapeToggle" type="button" aria-pressed="true">SHAPE</button>
           <button class="showcase-control" id="configToggle" type="button" aria-expanded="false" aria-controls="configPanel">CONFIG</button>
+        </div>
+
+        <div class="showcase-control-row showcase-control-row--single">
+          <button class="showcase-control" id="exportSettings" type="button">EXPORT JSON</button>
         </div>
 
         <div class="config-panel" id="configPanel" hidden>
@@ -189,7 +185,7 @@
       </footer>
     </aside>
 
-    <main class="showcase" aria-labelledby="menuTitle">
+    <main class="showcase" aria-label="Audio visualization showcase">
       <canvas id="showcaseCanvas" aria-hidden="true"></canvas>
       <div class="scanlines" aria-hidden="true"></div>
       <div class="vignette" aria-hidden="true"></div>
@@ -198,34 +194,13 @@
         <img class="aigox-logo" src="assets/images/aigox.png" alt="AIGOX Software" />
       </a>
 
-      <header class="showcase-header">
-        <div>
-          <p class="eyebrow">AUDIO VISUALIZATION ARCHIVE</p>
-          <h2>SELECT VISUALIZER</h2>
-        </div>
-        <div class="showcase-meta">
-          <span>WEBGL / REALTIME</span>
-          <span id="workspaceDate">—</span>
-        </div>
-      </header>
-
       <section class="xmb-menu" id="xmbMenu" aria-label="AIGOX cross media bar">
         <div class="xmb-categories" id="xmbCategories" role="tablist" aria-label="Media categories"></div>
 
         <div class="xmb-items-stage" id="xmbItemsStage">
           <nav class="xmb-items" id="xmbItems" aria-label="Selected category items"></nav>
-          <div class="xmb-selection-copy" aria-live="polite">
-            <strong id="xmbActiveName">BINARY TOWER</strong>
-            <p id="xmbActiveDescription">Audio-reactive binary terrain visualization.</p>
-          </div>
         </div>
       </section>
-
-      <div class="showcase-instructions" aria-hidden="true">
-        <span>SCROLL / ↑ ↓ SELECT</span>
-        <span>← → CATEGORY</span>
-        <span>ENTER OPEN / DRAG TO ROTATE</span>
-      </div>
     </main>
   </div>
 

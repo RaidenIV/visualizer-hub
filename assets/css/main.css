@@ -212,59 +212,6 @@ button:focus-visible {
   letter-spacing: 0.15em;
 }
 
-.sidebar-projects {
-  display: grid;
-  gap: 5px;
-}
-
-.sidebar-project-link {
-  position: relative;
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 8px;
-  min-height: 43px;
-  align-items: center;
-  padding: 0 10px 0 8px;
-  border: 1px solid transparent;
-  color: var(--muted-bright);
-  text-decoration: none;
-  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, transform 140ms ease;
-}
-
-.sidebar-project-link:hover,
-.sidebar-project-link.is-active {
-  border-color: var(--border-strong);
-  background: rgba(0, 117, 255, 0.08);
-  color: var(--text);
-  transform: translateX(3px);
-}
-
-.sidebar-project-link__number {
-  color: rgba(76, 160, 255, 0.64);
-  font: 700 9px/1 var(--mono);
-}
-
-.sidebar-project-link__name {
-  overflow: hidden;
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.sidebar-project-link__indicator {
-  width: 5px;
-  height: 5px;
-  border: 1px solid rgba(76, 160, 255, 0.45);
-  border-radius: 50%;
-}
-
-.sidebar-project-link.is-active .sidebar-project-link__indicator {
-  border-color: var(--accent-bright);
-  background: var(--accent-bright);
-  box-shadow: 0 0 10px var(--accent);
-}
 
 .status-dot {
   width: 6px;
@@ -338,8 +285,6 @@ button:focus-visible {
 
 .app-shell.sidebar-collapsed .brand-copy,
 .app-shell.sidebar-collapsed .section-heading,
-.app-shell.sidebar-collapsed .sidebar-project-link__name,
-.app-shell.sidebar-collapsed .sidebar-project-link__number,
 .app-shell.sidebar-collapsed .sidebar-section--system,
 .app-shell.sidebar-collapsed .sidebar-footer {
   display: none;
@@ -351,25 +296,6 @@ button:focus-visible {
   border-bottom: 0;
 }
 
-.app-shell.sidebar-collapsed .sidebar-projects {
-  gap: 9px;
-}
-
-.app-shell.sidebar-collapsed .sidebar-project-link {
-  display: grid;
-  width: 40px;
-  min-height: 40px;
-  margin: 0 auto;
-  place-items: center;
-  padding: 0;
-  border-color: rgba(76, 160, 255, 0.12);
-  transform: none;
-}
-
-.app-shell.sidebar-collapsed .sidebar-project-link__indicator {
-  width: 7px;
-  height: 7px;
-}
 
 .showcase {
   position: relative;
@@ -412,40 +338,6 @@ button:focus-visible {
   box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.78), inset 0 0 35px rgba(0, 117, 255, 0.06);
 }
 
-.showcase-header {
-  position: absolute;
-  top: 27px;
-  left: 32px;
-  right: 32px;
-  z-index: 10;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  pointer-events: none;
-}
-
-.showcase-header h2 {
-  margin: 8px 0 0;
-  font-size: clamp(24px, 2.4vw, 38px);
-  font-weight: 850;
-  line-height: 0.95;
-  letter-spacing: 0.055em;
-}
-
-.showcase-meta {
-  display: flex;
-  gap: 16px;
-  color: rgba(170, 184, 200, 0.56);
-  font: 600 8px/1 var(--mono);
-  letter-spacing: 0.13em;
-}
-
-.showcase-meta span + span::before {
-  margin-right: 16px;
-  color: var(--accent);
-  content: "+";
-}
 
 .xmb-menu {
   --xmb-anchor-x: 50%;
@@ -580,81 +472,8 @@ button:focus-visible {
   transform: translateX(0);
 }
 
-.xmb-item__marker {
-  width: 10px;
-  height: 10px;
-  border: 1px solid rgba(195, 210, 226, 0.24);
-  opacity: 0.3;
-  transform: rotate(45deg) scale(0.55);
-  transition: border-color 170ms ease, background-color 170ms ease, box-shadow 170ms ease, opacity 170ms ease, transform 170ms ease;
-}
 
-.xmb-item.is-active .xmb-item__marker {
-  border-color: var(--accent-bright);
-  background: rgba(0, 117, 255, 0.34);
-  box-shadow: 0 0 11px rgba(0, 117, 255, 0.9);
-  opacity: 1;
-  transform: rotate(45deg) scale(1);
-}
 
-.xmb-item__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.xmb-item__open {
-  color: var(--accent-bright);
-  opacity: 0;
-  transition: opacity 170ms ease, transform 170ms ease;
-}
-
-.xmb-item.is-active .xmb-item__open,
-.xmb-item:hover .xmb-item__open,
-.xmb-item:focus-visible .xmb-item__open {
-  opacity: 0.9;
-  transform: translate(2px, -2px);
-}
-
-.xmb-selection-copy {
-  display: grid;
-  gap: 6px;
-  margin-top: 22px;
-  padding: 14px 6px 0 40px;
-  border-top: 1px solid rgba(76, 160, 255, 0.14);
-}
-
-.xmb-selection-copy strong {
-  color: rgba(245, 249, 255, 0.78);
-  font: 650 9px/1.2 var(--mono);
-  letter-spacing: 0.12em;
-}
-
-.xmb-selection-copy p {
-  margin: 0;
-  color: rgba(170, 184, 200, 0.48);
-  font: 500 8px/1.5 var(--mono);
-  letter-spacing: 0.025em;
-}
-
-.showcase-instructions {
-  position: absolute;
-  right: 30px;
-  bottom: 24px;
-  z-index: 10;
-  display: flex;
-  gap: 20px;
-  color: rgba(170, 184, 200, 0.52);
-  font: 600 7px/1 var(--mono);
-  letter-spacing: 0.13em;
-  pointer-events: none;
-}
-
-.showcase-instructions span::before {
-  margin-right: 7px;
-  color: var(--accent);
-  content: "+";
-}
 
 .webgl-error {
   position: absolute;
@@ -710,8 +529,6 @@ button:focus-visible {
 
   .brand-copy,
   .section-heading,
-  .sidebar-project-link__name,
-  .sidebar-project-link__number,
   .sidebar-section--system,
   .sidebar-footer {
     display: none;
@@ -721,35 +538,6 @@ button:focus-visible {
     width: 100%;
     padding: 18px 0;
     border-bottom: 0;
-  }
-
-  .sidebar-projects {
-    gap: 9px;
-  }
-
-  .sidebar-project-link {
-    display: grid;
-    width: 40px;
-    min-height: 40px;
-    margin: 0 auto;
-    place-items: center;
-    padding: 0;
-    border-color: rgba(76, 160, 255, 0.12);
-    transform: none;
-  }
-
-  .sidebar-project-link__indicator {
-    width: 7px;
-    height: 7px;
-  }
-
-  .showcase-header {
-    left: 24px;
-    right: 24px;
-  }
-
-  .showcase-meta {
-    display: none;
   }
 
   .xmb-menu {
@@ -762,14 +550,6 @@ button:focus-visible {
 }
 
 @media (max-width: 650px) {
-  .showcase-header {
-    top: 20px;
-    left: 18px;
-  }
-
-  .showcase-header h2 {
-    font-size: 22px;
-  }
 
   .xmb-menu {
     top: 49%;
@@ -830,30 +610,9 @@ button:focus-visible {
   .xmb-item.is-active {
     font-size: 12px;
   }
-
-  .xmb-selection-copy {
-    margin-top: 15px;
-    padding-left: 36px;
-  }
-
-  .showcase-instructions {
-    right: 15px;
-    bottom: 16px;
-  }
-
-  .showcase-instructions span:not(:first-child) {
-    display: none;
-  }
 }
 
 @media (max-height: 720px) {
-  .showcase-header {
-    top: 16px;
-  }
-
-  .showcase-header h2 {
-    font-size: 24px;
-  }
 
   .xmb-menu {
     top: 52%;
@@ -874,11 +633,6 @@ button:focus-visible {
 
   .xmb-item {
     min-height: 33px;
-  }
-
-  .xmb-selection-copy {
-    margin-top: 12px;
-    padding-top: 10px;
   }
 }
 
@@ -1060,4 +814,100 @@ button:focus-visible {
 .vignette {
   border: 0;
   box-shadow: none;
+}
+
+/* XMB hierarchy and settings export refinements */
+.showcase-control-row--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#exportSettings {
+  width: 100%;
+}
+
+.xmb-menu {
+  z-index: 100;
+}
+
+.xmb-categories {
+  z-index: 2;
+}
+
+.xmb-category__name {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition: opacity 170ms ease, visibility 170ms ease, transform 170ms ease;
+}
+
+.xmb-category.is-active .xmb-category__name {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.xmb-items-stage {
+  z-index: 3;
+  width: 420px;
+  overflow: visible;
+}
+
+.xmb-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateY(var(--xmb-list-offset, 0px));
+  transition: transform 210ms cubic-bezier(0.2, 0.72, 0.2, 1);
+  will-change: transform;
+}
+
+.xmb-item {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 3px 0;
+  text-align: center;
+  transform: none;
+}
+
+.xmb-item.is-active {
+  transform: none;
+}
+
+.xmb-item__name {
+  width: 100%;
+  text-align: center;
+}
+
+.aigox-logo-link {
+  top: 18px;
+  right: 26px;
+  left: auto;
+  z-index: 90;
+  transform: none;
+}
+
+@media (max-width: 980px) {
+  .aigox-logo-link {
+    top: 19px;
+    right: 20px;
+    left: auto;
+    transform: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .xmb-items-stage {
+    left: var(--xmb-anchor-x) !important;
+    width: min(320px, calc(100vw - 92px));
+  }
+
+  .aigox-logo-link {
+    top: 20px;
+    right: 16px;
+    left: auto;
+    transform: none;
+  }
 }

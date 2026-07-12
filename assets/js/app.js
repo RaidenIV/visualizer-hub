@@ -7,9 +7,6 @@ import { hubConfig } from "./config.js";
 const appShell = document.querySelector("#appShell");
 const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebarToggleIcon = document.querySelector("#sidebarToggleIcon");
-const sidebarProjects = document.querySelector("#sidebarProjects");
-const projectCount = document.querySelector("#projectCount");
-const workspaceDate = document.querySelector("#workspaceDate");
 const sidebarDate = document.querySelector("#sidebarDate");
 const canvas = document.querySelector("#showcaseCanvas");
 const showcase = document.querySelector(".showcase");
@@ -17,17 +14,15 @@ const xmbMenu = document.querySelector("#xmbMenu");
 const xmbCategories = document.querySelector("#xmbCategories");
 const xmbItems = document.querySelector("#xmbItems");
 const xmbItemsStage = document.querySelector("#xmbItemsStage");
-const xmbActiveName = document.querySelector("#xmbActiveName");
-const xmbActiveDescription = document.querySelector("#xmbActiveDescription");
 const presetButtons = [...document.querySelectorAll("[data-preset]")];
 const shapeToggle = document.querySelector("#shapeToggle");
 const configToggle = document.querySelector("#configToggle");
 const configPanel = document.querySelector("#configPanel");
+const exportSettingsButton = document.querySelector("#exportSettings");
 const settingInputs = [...document.querySelectorAll("[data-scene-setting]")];
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const projectTotal = hubConfig.projects.length;
-const twoDigit = (value) => String(value).padStart(2, "0");
 const audioCategoryIndex = Math.max(
   0,
   hubConfig.categories.findIndex((category) => category.id === "audio")
@@ -42,8 +37,8 @@ let activePreset = "blueScifi";
 let shapeVisible = true;
 let wheelLocked = false;
 let wheelAccumulator = 0;
+let itemPointerLocked = false;
 
-projectCount.textContent = twoDigit(projectTotal);
 document.documentElement.style.setProperty("--accent", hubConfig.accent);
 
 function formatDate(date) {
@@ -57,7 +52,6 @@ function formatDate(date) {
 }
 
 const currentDate = formatDate(new Date());
-workspaceDate.textContent = currentDate;
 sidebarDate.textContent = currentDate;
 
 function getProjectIndex(projectId) {
@@ -74,38 +68,6 @@ function getVisualizerLocation(projectId) {
   return null;
 }
 
-function createSidebarLink(project, index) {
-  const link = document.createElement("a");
-  link.className = "sidebar-project-link";
-  link.href = `#${project.id}`;
-  link.dataset.index = String(index);
-  link.setAttribute("aria-label", `Highlight ${project.name}`);
-  link.innerHTML = `
-    <span class="sidebar-project-link__number">${twoDigit(index + 1)}</span>
-    <span class="sidebar-project-link__name">${project.shortName}</span>
-    <span class="sidebar-project-link__indicator" aria-hidden="true"></span>
-  `;
-
-  const syncProject = () => selectVisualizer(index, { syncXmb: true });
-
-  link.addEventListener("click", (event) => {
-    event.preventDefault();
-    syncProject();
-    requestAnimationFrame(() => {
-      xmbItems.querySelector(".xmb-item.is-active")?.focus({ preventScroll: true });
-    });
-  });
-  link.addEventListener("pointerenter", syncProject);
-  return link;
-}
-
-function renderSidebarProjects() {
-  const fragment = document.createDocumentFragment();
-  hubConfig.projects.forEach((project, index) => {
-    fragment.append(createSidebarLink(project, index));
-  });
-  sidebarProjects.replaceChildren(fragment);
-}
 
 function createCategoryButton(category, index) {
   const button = document.createElement("button");
@@ -135,13 +97,16 @@ function createXmbItem(item, index) {
   link.target = item.href.endsWith("svg.html") ? "_self" : "_blank";
   if (link.target === "_blank") link.rel = "noopener noreferrer";
   link.dataset.index = String(index);
-  link.innerHTML = `
-    <span class="xmb-item__marker" aria-hidden="true"></span>
-    <span class="xmb-item__name">${item.name}</span>
-    <span class="xmb-item__open" aria-hidden="true">↗</span>
-  `;
+  link.innerHTML = `<span class="xmb-item__name">${item.name}</span>`;
 
-  link.addEventListener("pointerenter", () => selectXmbItem(index));
+  link.addEventListener("pointerenter", () => {
+    if (itemPointerLocked) return;
+    itemPointerLocked = true;
+    selectXmbItem(index);
+    window.setTimeout(() => {
+      itemPointerLocked = false;
+    }, 230);
+  });
   link.addEventListener("focus", () => selectXmbItem(index));
   link.addEventListener("click", () => selectXmbItem(index));
   return link;
@@ -170,12 +135,6 @@ function selectVisualizer(index, { syncXmb = false } = {}) {
   selectedProjectIndex = (index + projectTotal) % projectTotal;
   const project = hubConfig.projects[selectedProjectIndex];
 
-  document.querySelectorAll(".sidebar-project-link").forEach((link, linkIndex) => {
-    const isActive = linkIndex === selectedProjectIndex;
-    link.classList.toggle("is-active", isActive);
-    link.setAttribute("aria-current", isActive ? "page" : "false");
-  });
-
   sceneController?.setProject(project);
 
   if (syncXmb) {
@@ -201,8 +160,9 @@ function updateXmbSelection({ focus = false, animate = false, direction = 1 } = 
     link.tabIndex = isActive ? 0 : -1;
   });
 
-  xmbActiveName.textContent = selectedItem.name;
-  xmbActiveDescription.textContent = selectedItem.description;
+  const activeItem = xmbItems.querySelector(".xmb-item.is-active");
+  const listOffset = activeItem ? -activeItem.offsetTop : 0;
+  xmbItems.style.setProperty("--xmb-list-offset", `${listOffset}px`);
 
   if (selectedItem.visualizerId) {
     const projectIndex = getProjectIndex(selectedItem.visualizerId);
@@ -314,12 +274,34 @@ function setShapeVisible(visible) {
   sceneController?.setShapeVisible(visible);
 }
 
+function exportSettings() {
+  const settings = Object.fromEntries(
+    settingInputs.map((input) => [input.dataset.sceneSetting, Number(input.value)])
+  );
+  const payload = {
+    preset: activePreset,
+    shapeVisible,
+    settings
+  };
+  const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "audio-visualization-hub-settings.json";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function bindShowcaseControls() {
   presetButtons.forEach((button) => {
     button.addEventListener("click", () => activatePreset(button.dataset.preset));
   });
 
   shapeToggle.addEventListener("click", () => setShapeVisible(!shapeVisible));
+
+  exportSettingsButton.addEventListener("click", exportSettings);
 
   configToggle.addEventListener("click", () => {
     const expanded = configToggle.getAttribute("aria-expanded") === "true";
@@ -985,7 +967,6 @@ function showWebGLError(message) {
   showcase.append(error);
 }
 
-renderSidebarProjects();
 renderXmb();
 bindShowcaseControls();
 
