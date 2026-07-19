@@ -34,6 +34,173 @@ const DITHER_SHAPE_MAP = Object.freeze({
   Plus: 10
 });
 
+const CONTROL_GROUPS = Object.freeze([
+  {
+    name: "Gallery",
+    controls: [
+      { key: "imageScale", label: "Image Size", value: 0.83, min: 0.3, max: 2, step: 0.01 },
+      { key: "radius", label: "Radius", value: 6, min: 1, max: 10, step: 0.1 },
+      { key: "spiralStep", label: "Spiral Step", value: 0.8, min: 0.3, max: 5, step: 0.05 },
+      { key: "imagesPerTurn", label: "Images / Turn", value: 7, min: 2, max: 10, step: 1 },
+      { key: "curvature", label: "Curvature", value: 1.5, min: 0.5, max: 4, step: 0.05 }
+    ]
+  },
+  {
+    name: "Motion",
+    controls: [
+      { key: "momentum", label: "Momentum", value: 0.87, min: 0.5, max: 0.99, step: 0.01 },
+      { key: "scrollAdvanceSpeed", label: "Scroll Advance Speed", value: 0.17, min: 0, max: 2, step: 0.01 },
+      { key: "autoRotateSpeed", label: "Auto-rotate Speed", value: 0.002, min: 0, max: 0.02, step: 0.0005 },
+      { key: "scrollRotateForce", label: "Scroll Rotate Force", value: 1.75, min: 0, max: 5, step: 0.05 },
+      { key: "maxRotationSpeed", label: "Max Rotation Speed", value: 0.15, min: 0.005, max: 0.2, step: 0.005 },
+      { key: "rotationSmoothing", label: "Rotation Smoothing", value: 0.09, min: 0.005, max: 0.2, step: 0.005 }
+    ]
+  },
+  {
+    name: "Effects",
+    controls: [
+      { key: "squeezeMax", label: "Squeeze Intensity", value: 0.5, min: 0, max: 0.8, step: 0.01 },
+      { key: "squeezeWidth", label: "Squeeze Width", value: 7.5, min: 1, max: 15, step: 0.5 },
+      { key: "chromaticAberration", label: "Chromatic Aberration", value: 0.02, min: 0, max: 0.15, step: 0.005 },
+      { key: "opacity", label: "Opacity", value: 1, min: 0, max: 1, step: 0.01 },
+      { key: "emission", label: "Emission", value: 0.65, min: 0, max: 3, step: 0.05 },
+      { key: "saturation", label: "Saturation", value: 1.5, min: 0, max: 3, step: 0.05 },
+      { key: "brightness", label: "Brightness", value: 1.15, min: 0.2, max: 3, step: 0.05 },
+      { key: "scanLines", label: "Scan Lines", value: 0.6, min: 0, max: 1, step: 0.05 },
+      { key: "scanLineSpeed", label: "Scan Speed", value: 3.9, min: 0, max: 5, step: 0.1 },
+      { key: "scanLineDensity", label: "Scan Density", value: 25, min: 5, max: 100, step: 1 },
+      { key: "distanceFadeStart", label: "Fade Start", value: 3, min: 0, max: 20, step: 0.5 },
+      { key: "distanceFadeEnd", label: "Fade End", value: 8, min: 1, max: 30, step: 0.5 },
+      { key: "flickerIntensity", label: "Flicker", value: 0.18, min: 0, max: 1, step: 0.01 },
+      { key: "flickerSpeed", label: "Flicker Speed", value: 5, min: 0.1, max: 5, step: 0.1 }
+    ]
+  },
+  {
+    name: "Border",
+    controls: [
+      { key: "borderWidth", label: "Width", value: 0.005, min: 0.005, max: 0.1, step: 0.005 },
+      { key: "borderColor", label: "Color", type: "color", value: "#ffffff" },
+      { key: "borderEmission", label: "Glow", value: 0, min: 0, max: 5, step: 0.1 },
+      { key: "borderRadius", label: "Radius", value: 0, min: 0, max: 0.25, step: 0.005 },
+      { key: "borderOffset", label: "Offset", value: 0, min: -0.1, max: 0.1, step: 0.005 }
+    ]
+  },
+  {
+    name: "Corners",
+    controls: [
+      { key: "cornerSize", label: "Size", value: 0.06, min: 0, max: 0.4, step: 0.01 },
+      { key: "cornerWidth", label: "Width", value: 0.005, min: 0.005, max: 0.08, step: 0.005 },
+      { key: "cornerOffset", label: "Offset", value: 0.03, min: -0.1, max: 0.15, step: 0.005 }
+    ]
+  },
+  {
+    name: "Dither",
+    controls: [
+      { key: "ditherEnabled", label: "Enabled", type: "checkbox", value: true },
+      { key: "ditherCellSize", label: "Cell Size", value: 2, min: 0, max: 10, step: 1 },
+      { key: "ditherGap", label: "Gap", value: 2.75, min: 0, max: 20, step: 0.25 },
+      { key: "ditherContrast", label: "Contrast", value: 0, min: -1, max: 1, step: 0.01 },
+      { key: "ditherMode", label: "Mode", type: "select", value: "Inv Halftone", options: Object.keys(DITHER_MODE_MAP) },
+      { key: "ditherShape", label: "Shape", type: "select", value: "Circle", options: Object.keys(DITHER_SHAPE_MAP) },
+      { key: "ditherBaseScale", label: "Base Scale", value: 0.76, min: 0.1, max: 5, step: 0.01 },
+      { key: "ditherIntensity", label: "Intensity", value: 2.61, min: 0, max: 5, step: 0.01 },
+      { key: "ditherBgColor", label: "BG Color", type: "color", value: "#111111" },
+      { key: "ditherUseColor", label: "Use Image Color", type: "checkbox", value: true },
+      { key: "ditherFgColor", label: "FG Color", type: "color", value: "#ffffff" }
+    ]
+  },
+  {
+    name: "Grid",
+    controls: [
+      { key: "cylinderRadius", label: "Radius", value: 32, min: 10, max: 80, step: 1 },
+      { key: "cylinderHeight", label: "Height", value: 90, min: 20, max: 200, step: 5 },
+      { key: "gridSize", label: "Cell Size", value: 0.45, min: 0.05, max: 1, step: 0.01 },
+      { key: "subdivisions", label: "Subdivisions", value: 2, min: 1, max: 6, step: 1 },
+      { key: "tileX", label: "Tile X", value: 17, min: 1, max: 40, step: 1 },
+      { key: "tileY", label: "Tile Y", value: 5, min: 1, max: 40, step: 1 },
+      { key: "majorLineWidth", label: "Major Line W", value: 0.005, min: 0.0005, max: 0.01, step: 0.0005 },
+      { key: "minorLineWidth", label: "Minor Line W", value: 0.004, min: 0.0005, max: 0.005, step: 0.0005 },
+      { key: "dotSize", label: "Dot Size", value: 0.011, min: 0.001, max: 0.02, step: 0.001 },
+      { key: "majorLineColor", label: "Major Color", type: "color", value: hubConfig.accent },
+      { key: "minorLineColor", label: "Minor Color", type: "color", value: hubConfig.accent },
+      { key: "dotColor", label: "Dot Color", type: "color", value: hubConfig.accent },
+      { key: "majorLineOpacity", label: "Major Opacity", value: 0.46, min: 0, max: 1, step: 0.01 },
+      { key: "minorLineOpacity", label: "Minor Opacity", value: 0.14, min: 0, max: 1, step: 0.01 },
+      { key: "dotOpacity", label: "Dot Opacity", value: 1, min: 0, max: 1, step: 0.01 },
+      { key: "horizontalFade", label: "Horizontal Fade", value: 0.1, min: 0, max: 1, step: 0.05 },
+      { key: "horizontalFadeSoftness", label: "Horizontal Softness", value: 0.7, min: 0.01, max: 1, step: 0.05 },
+      { key: "bgColor", label: "BG Color", type: "color", value: "#001d50" },
+      { key: "bgOpacity", label: "BG Opacity", value: 0.51, min: 0, max: 1, step: 0.01 }
+    ]
+  },
+  {
+    name: "Camera",
+    controls: [
+      { key: "panIntensityX", label: "Pan X Intensity", value: 0.8, min: 0, max: 6, step: 0.1 },
+      { key: "panIntensityY", label: "Pan Y Intensity", value: 1.2, min: 0, max: 4, step: 0.1 },
+      { key: "cameraSmoothing", label: "Smoothing", value: 0.06, min: 0.01, max: 1, step: 0.01 },
+      { key: "initialZoom", label: "Base Zoom", value: 11, min: 5, max: 25, step: 0.5 },
+      { key: "maxZoomOut", label: "Max Zoom Out", value: 28.5, min: 5, max: 30, step: 0.5 },
+      { key: "zoomSpeed", label: "Zoom Speed", value: 0.05, min: 0, max: 0.3, step: 0.005 },
+      { key: "zoomDecay", label: "Zoom Decay", value: 0.1, min: 0.01, max: 0.5, step: 0.01 },
+      { key: "lookAtX", label: "Look At X", value: 0, min: -5, max: 5, step: 0.1 },
+      { key: "lookAtY", label: "Look At Y", value: 0.1, min: -5, max: 5, step: 0.1 },
+      { key: "lookAtZ", label: "Look At Z", value: 0, min: -5, max: 5, step: 0.1 }
+    ]
+  },
+  {
+    name: "Bloom",
+    controls: [
+      { key: "bloomIntensity", label: "Intensity", value: 1.2, min: 0, max: 10, step: 0.1 },
+      { key: "bloomThreshold", label: "Threshold", value: 0.01, min: 0, max: 2, step: 0.01 },
+      { key: "bloomSmoothing", label: "Smoothing", value: 0.45, min: 0, max: 1, step: 0.05 },
+      { key: "bloomRadius", label: "Radius", value: 0.65, min: 0, max: 1, step: 0.05 }
+    ]
+  },
+  {
+    name: "Torus",
+    controls: [
+      { key: "shapeEnabled", label: "Enable", type: "checkbox", value: true },
+      { key: "shapeType", label: "Shape", type: "select", value: "Torus", options: ["Torus", "TorusKnot", "Cube"] },
+      { key: "torusScale", label: "Scale", value: 2.3, min: 0.1, max: 10, step: 0.1 },
+      { key: "shapeColor", label: "Color", type: "color", value: hubConfig.accent },
+      { key: "shapeAutoRotateSpeed", label: "Auto Rotate", value: 0.004, min: 0, max: 0.02, step: 0.0005 },
+      { key: "shapeScrollRotateForce", label: "Scroll Rotate", value: 1.75, min: 0, max: 5, step: 0.05 },
+      { key: "shapeMaxRotationSpeed", label: "Max Rot Speed", value: 0.15, min: 0.005, max: 0.3, step: 0.005 },
+      { key: "shapeRotationSmoothing", label: "Rot Smoothing", value: 0.09, min: 0.005, max: 0.2, step: 0.005 },
+      { key: "shapeTiltX", label: "Tilt X", value: -0.5, min: -Math.PI, max: Math.PI, step: 0.01 },
+      { key: "shapeTiltZ", label: "Tilt Z", value: -1.95, min: -Math.PI, max: Math.PI, step: 0.01 },
+      { key: "shapeScaleReact", label: "Scale React", value: 0.02, min: 0, max: 0.5, step: 0.01 },
+      { key: "shapeScaleSmoothing", label: "Scale Smoothing", value: 0.04, min: 0.01, max: 0.2, step: 0.01 },
+      { key: "torusOpacity", label: "Opacity", value: 0.8, min: 0, max: 1, step: 0.01 },
+      { key: "shapeSingleSide", label: "Single Side", type: "checkbox", value: true }
+    ]
+  }
+]);
+
+const PRESET_VALUES = Object.freeze({
+  default: Object.freeze({
+    bloomIntensity: 1.2,
+    borderColor: "#ffffff",
+    borderEmission: 0,
+    ditherUseColor: true,
+    ditherFgColor: "#ffffff",
+    ditherGap: 2.75,
+    ditherContrast: 0,
+    ditherBaseScale: 0.76
+  }),
+  blueScifi: Object.freeze({
+    bloomIntensity: 0.9,
+    borderColor: hubConfig.accent,
+    borderEmission: 1.6,
+    ditherUseColor: false,
+    ditherFgColor: hubConfig.accent,
+    ditherGap: 5.5,
+    ditherContrast: -0.02,
+    ditherBaseScale: 0.44
+  })
+});
+
 const appShell = document.querySelector("#appShell");
 const sidebarToggle = document.querySelector("#sidebarToggle");
 const sidebarToggleIcon = document.querySelector("#sidebarToggleIcon");
@@ -47,7 +214,7 @@ const shapeToggle = document.querySelector("#shapeToggle");
 const configToggle = document.querySelector("#configToggle");
 const configPanel = document.querySelector("#configPanel");
 const exportSettingsButton = document.querySelector("#exportSettings");
-const settingInputs = [...document.querySelectorAll("[data-scene-setting]")];
+let settingInputs = [];
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const projectTotal = hubConfig.visualizers.length;
@@ -62,6 +229,67 @@ let wheelAccumulator = 0;
 let wheelResetTimer = 0;
 
 document.documentElement.style.setProperty("--accent", hubConfig.accent);
+
+
+function renderShowcaseConfig() {
+  const fragment = document.createDocumentFragment();
+
+  CONTROL_GROUPS.forEach((group, groupIndex) => {
+    const details = document.createElement("details");
+    if (groupIndex === 0) details.open = true;
+
+    const summary = document.createElement("summary");
+    summary.textContent = group.name.toUpperCase();
+    details.append(summary);
+
+    group.controls.forEach((definition) => {
+      const label = document.createElement("label");
+      label.className = `config-control config-control--${definition.type ?? "range"}`;
+
+      const name = document.createElement("span");
+      name.textContent = definition.label.toUpperCase();
+
+      const output = document.createElement("output");
+      output.dataset.outputFor = definition.key;
+
+      let control;
+      if (definition.type === "select") {
+        control = document.createElement("select");
+        definition.options.forEach((optionValue) => {
+          const option = document.createElement("option");
+          option.value = optionValue;
+          option.textContent = optionValue;
+          control.append(option);
+        });
+        control.value = definition.value;
+      } else {
+        control = document.createElement("input");
+        control.type = definition.type ?? "range";
+        if (control.type === "checkbox") {
+          control.checked = Boolean(definition.value);
+        } else {
+          control.value = String(definition.value);
+        }
+        if (control.type === "range") {
+          control.min = String(definition.min);
+          control.max = String(definition.max);
+          control.step = String(definition.step);
+        }
+      }
+
+      control.dataset.sceneSetting = definition.key;
+      control.setAttribute("aria-label", definition.label);
+      label.append(name, output, control);
+      details.append(label);
+    });
+
+    fragment.append(details);
+  });
+
+  configPanel.replaceChildren(fragment);
+  settingInputs = [...configPanel.querySelectorAll("[data-scene-setting]")];
+  settingInputs.forEach((control) => syncControlOutput(control));
+}
 
 function formatDate(date) {
   return date
@@ -201,9 +429,13 @@ function activatePreset(preset) {
     button.setAttribute("aria-pressed", String(isActive));
   });
 
-  const bloomIntensity = preset === "default" ? 1.2 : 0.9;
-  setControlValue("bloomIntensity", bloomIntensity);
-  sceneController?.setSetting("bloomIntensity", bloomIntensity);
+  const presetValues = PRESET_VALUES[preset];
+  if (presetValues) {
+    Object.entries(presetValues).forEach(([name, value]) => {
+      setControlValue(name, value);
+      sceneController?.setSetting(name, value);
+    });
+  }
   sceneController?.setPreset(preset);
 }
 
@@ -360,9 +592,9 @@ class CylindricalShowcase {
     this.instanceCount = 20;
     this.settings = {
       imageScale: 0.83,
-      radius: 6.4,
-      spiralStep: 1.48,
-      imagesPerTurn: 6,
+      radius: 6,
+      spiralStep: 0.8,
+      imagesPerTurn: 7,
       curvature: 1.5,
       momentum: 0.87,
       scrollAdvanceSpeed: 0.17,
@@ -799,19 +1031,24 @@ class CylindricalShowcase {
           vec2 cellCount = vec2(118.0, 68.0) / cellFactor;
           vec2 cell = fract(uv * cellCount) - 0.5;
           float modeLuma = luma;
+          if (uDitherMode < 0.5) modeLuma = 1.0;
           if (uDitherMode > 1.5 && uDitherMode < 2.5) modeLuma = 1.0 - luma;
           if (uDitherMode > 11.5 && uDitherMode < 12.5) modeLuma = floor(luma * 5.0) / 4.0;
           if (uDitherMode > 14.5) modeLuma = step(0.5, luma);
           if (uDitherMode > 12.5 && uDitherMode < 13.5) {
-            modeLuma = fract(sin(dot(floor(uv * cellCount), vec2(12.9898, 78.233))) * 43758.5453);
+            float randomValue = fract(sin(dot(floor(uv * cellCount), vec2(12.9898, 78.233))) * 43758.5453);
+            modeLuma = clamp(luma + randomValue * 0.5, 0.0, 1.0);
           }
           if (uDitherMode > 2.5 && uDitherMode < 3.5) {
-            float a = uTime * 0.45;
+            float a = luma * 3.14159265359 * uDitherIntensity;
             cell = mat2(cos(a), -sin(a), sin(a), cos(a)) * cell;
           }
           if (uDitherMode > 3.5 && uDitherMode < 4.5) cell.y *= 0.45;
           if (uDitherMode > 4.5 && uDitherMode < 5.5) cell.x *= 0.45;
-          if (uDitherMode > 5.5 && uDitherMode < 6.5) modeLuma *= mod(floor(uv.x * cellCount.x) + floor(uv.y * cellCount.y), 2.0);
+          if (uDitherMode > 5.5 && uDitherMode < 6.5) {
+            float checker = mod(floor(uv.x * cellCount.x) + floor(uv.y * cellCount.y), 2.0);
+            modeLuma = mix(luma, 1.0 - luma, checker);
+          }
           if (uDitherMode > 7.5 && uDitherMode < 8.5) cell.x += sin(cell.y * 28.0 + uTime * 8.0) * 0.16;
           if (uDitherMode > 8.5 && uDitherMode < 9.5) cell.y += sin(uv.x * 24.0 + uTime * 2.0) * 0.22;
           if (uDitherMode > 9.5 && uDitherMode < 10.5) {
@@ -1274,6 +1511,7 @@ function showWebGLError(message) {
   showcase.append(error);
 }
 
+renderShowcaseConfig();
 renderVisualizerNav();
 bindShowcaseControls();
 
@@ -1286,7 +1524,7 @@ try {
   const initialVisualizer = hubConfig.visualizers[selectedProjectIndex];
   const initialProject = getProject(initialVisualizer.projectId);
   if (initialProject) sceneController.setProject(initialProject);
-  sceneController.setPreset(activePreset);
+  activatePreset(activePreset);
   sceneController.setShapeVisible(shapeVisible);
 } catch (error) {
   console.error(error);

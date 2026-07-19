@@ -613,6 +613,46 @@ button:focus-visible {
   cursor: pointer;
 }
 
+
+.config-control select,
+.config-control input[type="color"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid rgba(76, 160, 255, 0.28);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.72);
+  color: var(--accent-bright);
+  font: 600 8px/1 var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.config-control select {
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.config-control input[type="color"] {
+  height: 30px;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.config-control input[type="checkbox"] {
+  grid-column: 1 / -1;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.config-control select:focus-visible,
+.config-control input:focus-visible {
+  outline: 1px solid var(--accent-bright);
+  outline-offset: 2px;
+}
+
 .aigox-logo-link {
   position: absolute;
   top: 18px;
